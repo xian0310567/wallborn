@@ -4,7 +4,6 @@
 
 # Godot generated
 *.translation
-export_presets.cfg
 
 # OS/editor
 .DS_Store
