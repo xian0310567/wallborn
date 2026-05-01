@@ -14,21 +14,88 @@ var enemies: Array[Node] = []
 var defense_units: Dictionary = {}
 var attack_effects: Array[Dictionary] = []
 
+var wave_index := 0
+var wave_active := false
+var wave_enemies_to_spawn := 0
+var wave_spawned_count := 0
+var wave_resolved_count := 0
+var wave_spawn_timer := 0.0
+var wave_spawn_interval := 0.75
+var waves_cleared := 0
+var start_wave_button: Button = null
+
 func _ready() -> void:
 	path = grid.find_path()
+	_create_wave_button()
 	print("Wallborn boot OK")
 	print("Grid ready: %sx%s cells, cell_size=%s" % [grid.size.x, grid.size.y, grid.cell_size])
 	print("Path ready: %s cells" % path.size())
-	spawn_enemy()
 	queue_redraw()
 
 func _process(delta: float) -> void:
+	_update_wave(delta)
 	_update_defenses(delta)
 	_update_attack_effects(delta)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		try_place_defense_at(event.position)
+
+func _create_wave_button() -> void:
+	start_wave_button = Button.new()
+	start_wave_button.text = "Start Wave"
+	start_wave_button.position = Vector2(64, 16)
+	start_wave_button.size = Vector2(140, 36)
+	start_wave_button.pressed.connect(start_wave)
+	add_child(start_wave_button)
+
+func _set_wave_button_enabled(enabled: bool) -> void:
+	if start_wave_button != null:
+		start_wave_button.disabled = not enabled
+
+func start_wave() -> bool:
+	if wave_active:
+		return false
+	if path.size() < 2:
+		push_warning("Cannot start wave: no valid path")
+		return false
+	wave_index += 1
+	wave_active = true
+	wave_enemies_to_spawn = 4 + wave_index
+	wave_spawned_count = 0
+	wave_resolved_count = 0
+	wave_spawn_timer = 0.0
+	_set_wave_button_enabled(false)
+	print("Wave %s started: %s enemies" % [wave_index, wave_enemies_to_spawn])
+	queue_redraw()
+	return true
+
+func _update_wave(delta: float) -> void:
+	if not wave_active:
+		return
+	if wave_spawned_count >= wave_enemies_to_spawn:
+		return
+	wave_spawn_timer -= delta
+	if wave_spawn_timer <= 0.0:
+		if spawn_enemy():
+			wave_spawned_count += 1
+			wave_spawn_timer = wave_spawn_interval
+		_check_wave_completed()
+
+func _record_enemy_resolved() -> void:
+	if wave_active:
+		wave_resolved_count += 1
+		_check_wave_completed()
+
+func _check_wave_completed() -> void:
+	if not wave_active:
+		return
+	if wave_spawned_count >= wave_enemies_to_spawn and wave_resolved_count >= wave_enemies_to_spawn:
+		wave_active = false
+		waves_cleared += 1
+		_set_wave_button_enabled(true)
+		print("Wave %s cleared" % wave_index)
+		queue_redraw()
 
 func try_place_defense_at(world_pos: Vector2) -> bool:
 	var cell: Vector2i = grid_view.world_to_cell(world_pos)
@@ -42,11 +109,11 @@ func try_place_defense_at(world_pos: Vector2) -> bool:
 	queue_redraw()
 	return true
 
-func spawn_enemy() -> void:
+func spawn_enemy() -> bool:
 	var path_points := _path_to_world_points(path)
 	if path_points.size() < 2:
 		push_warning("Cannot spawn enemy: no valid path")
-		return
+		return false
 	var enemy = EnemyScript.new()
 	enemy.setup(path_points, 120.0)
 	enemy.reached_goal.connect(_on_enemy_reached_goal)
@@ -54,17 +121,19 @@ func spawn_enemy() -> void:
 	enemies.append(enemy)
 	add_child(enemy)
 	print("Enemy spawned")
+	return true
 
 func _on_enemy_reached_goal(enemy: Node) -> void:
 	print("Enemy reached goal")
 	enemies.erase(enemy)
+	_record_enemy_resolved()
 	enemy.queue_free()
 
 func _on_enemy_died(enemy: Node) -> void:
 	print("Enemy defeated")
 	enemies.erase(enemy)
+	_record_enemy_resolved()
 	enemy.queue_free()
-
 
 func _create_defense_unit() -> Dictionary:
 	return {
@@ -143,6 +212,7 @@ func _draw() -> void:
 	_draw_cells()
 	_draw_path()
 	_draw_attack_effects()
+	_draw_wave_status()
 	_draw_grid_lines()
 
 func _draw_background() -> void:
@@ -188,10 +258,13 @@ func _draw_path() -> void:
 	for point in points:
 		draw_circle(point, 5.0, Color("#fde68a"))
 
+func _draw_wave_status() -> void:
+	var status := "Wave %s | Spawned %s/%s | Resolved %s/%s | Cleared %s" % [wave_index, wave_spawned_count, wave_enemies_to_spawn, wave_resolved_count, wave_enemies_to_spawn, waves_cleared]
+	if not wave_active:
+		status = "Ready | Cleared %s | Press Start Wave" % waves_cleared
+	draw_string(ThemeDB.fallback_font, Vector2(224, 39), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#e5e7eb"))
+
 func _draw_grid_lines() -> void:
 	# Cell outlines are drawn in _draw_cells(). Keeping this hook makes future
 	# projection-specific overlays possible without coupling gameplay to rendering.
 	pass
-
-
-

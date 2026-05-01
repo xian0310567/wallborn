@@ -40,9 +40,16 @@ try {
     Write-Error "Godot combat test failed. See $LogPath"
   }
 
+  "== Wave unit test ==" | Tee-Object -FilePath $LogPath -Append
+  & $Godot --headless --path $ProjectRoot --script res://tests/test_wave.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Godot wave test failed. See $LogPath"
+  }
+
   Write-Host "All tests passed. Log: $LogPath"
 }
 finally {
   Pop-Location
 }
+
 

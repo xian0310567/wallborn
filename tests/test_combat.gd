@@ -6,8 +6,9 @@ func _initialize() -> void:
 	var main = MainScript.new()
 	get_root().add_child(main)
 	await process_frame
+	_assert_true(main.spawn_enemy(), "combat test should spawn one enemy")
 
-	_assert_true(main.enemies.size() == 1, "main should spawn one enemy for combat test")
+	_assert_true(main.enemies.size() == 1, "main should have one enemy for combat test")
 	var enemy: Node = main.enemies[0]
 	enemy.position = main.grid_view.cell_to_world(Vector2i(3, 4))
 	var defense_cell := Vector2i(2, 4)
@@ -35,3 +36,4 @@ func _assert_true(value: bool, message: String) -> void:
 	if not value:
 		push_error(message)
 		quit(1)
+
