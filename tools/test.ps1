@@ -8,8 +8,22 @@ $LogDir = Join-Path $ProjectRoot "logs"
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $LogPath = Join-Path $LogDir "test-last.log"
 
-& $Godot --headless --path $ProjectRoot --quit-after 1 2>&1 | Tee-Object -FilePath $LogPath
-if ($LASTEXITCODE -ne 0) {
-  Write-Error "Godot smoke test failed. See $LogPath"
+Push-Location $ProjectRoot
+try {
+  "== Smoke test ==" | Tee-Object -FilePath $LogPath
+  & $Godot --headless --path $ProjectRoot --quit-after 1 2>&1 | Tee-Object -FilePath $LogPath -Append
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Godot smoke test failed. See $LogPath"
+  }
+
+  "== Grid unit test ==" | Tee-Object -FilePath $LogPath -Append
+  & $Godot --headless --path $ProjectRoot --script res://tests/test_grid.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Godot grid test failed. See $LogPath"
+  }
+
+  Write-Host "All tests passed. Log: $LogPath"
 }
-Write-Host "Godot smoke test passed. Log: $LogPath"
+finally {
+  Pop-Location
+}
