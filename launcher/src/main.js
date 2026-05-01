@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const AdmZip = require('adm-zip');
 
 const REPO = 'xian0310567/wallborn';
@@ -101,6 +101,24 @@ function findFirst(dir, predicate) {
   return null;
 }
 
+function prepareMacApp(appPath) {
+  if (process.platform !== 'darwin') return;
+  try {
+    execFileSync('xattr', ['-dr', 'com.apple.quarantine', appPath], { stdio: 'ignore' });
+  } catch (error) {
+    console.warn(`Failed to clear quarantine for ${appPath}: ${error.message}`);
+  }
+  try {
+    const executableDir = path.join(appPath, 'Contents', 'MacOS');
+    if (fs.existsSync(executableDir)) {
+      for (const fileName of fs.readdirSync(executableDir)) {
+        execFileSync('chmod', ['+x', path.join(executableDir, fileName)], { stdio: 'ignore' });
+      }
+    }
+  } catch (error) {
+    console.warn(`Failed to chmod executable for ${appPath}: ${error.message}`);
+  }
+}
 async function installLatestBuild() {
   ensureDirs();
   const config = readConfig();
@@ -117,6 +135,11 @@ async function installLatestBuild() {
     fs.copyFileSync(output, path.join(p.latest, release.assetName));
   }
 
+  if (process.platform === 'darwin') {
+    const appPath = findFirst(p.latest, (fullPath, entry) => entry.isDirectory() && fullPath.endsWith('.app'));
+    if (appPath) prepareMacApp(appPath);
+  }
+
   writeConfig({ ...config, installedAssetUpdatedAt: release.assetUpdatedAt });
   return { release, installPath: p.latest };
 }
@@ -126,7 +149,8 @@ function launchInstalledBuild() {
   if (process.platform === 'darwin') {
     const appPath = findFirst(p.latest, (fullPath, entry) => entry.isDirectory() && fullPath.endsWith('.app'));
     if (!appPath) throw new Error('No .app found. Run Update first.');
-    spawn('open', [appPath], { detached: true, stdio: 'ignore' }).unref();
+    prepareMacApp(appPath);
+    spawn('open', ['-n', appPath], { detached: true, stdio: 'ignore' }).unref();
     return appPath;
   }
 
