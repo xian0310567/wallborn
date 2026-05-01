@@ -1,0 +1,16 @@
+{
+  "name": "wallborn-test-launcher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Internal test launcher for Wallborn builds",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "electron": "^39.2.7"
+  },
+  "devDependencies": {}
+}
