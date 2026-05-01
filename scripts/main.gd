@@ -73,6 +73,7 @@ func start_wave() -> bool:
 	wave_spawned_count = 0
 	wave_resolved_count = 0
 	wave_spawn_timer = 0.0
+	wave_spawn_interval = maxf(0.42, 0.75 - float(wave_index - 1) * 0.04)
 	_set_wave_button_enabled(false)
 	print("Wave %s started: %s enemies" % [wave_index, wave_enemies_to_spawn])
 	queue_redraw()
@@ -189,13 +190,34 @@ func spawn_enemy() -> bool:
 		push_warning("Cannot spawn enemy: no valid path")
 		return false
 	var enemy = EnemyScript.new()
-	enemy.setup(path_points, 120.0)
+	_configure_enemy_for_wave(enemy)
+	enemy.setup(path_points, enemy.speed)
 	enemy.reached_goal.connect(_on_enemy_reached_goal)
 	enemy.died.connect(_on_enemy_died)
 	enemies.append(enemy)
 	add_child(enemy)
 	print("Enemy spawned")
 	return true
+
+func _configure_enemy_for_wave(enemy: Node) -> void:
+	var spawn_number := wave_spawned_count + 1
+	var variant := "crawler"
+	var effective_wave := maxi(wave_index, 1)
+	var speed := 116.0 + float(effective_wave) * 3.0
+	var health := 28.0 + float(effective_wave - 1) * 4.0
+	if wave_index >= 3 and spawn_number % 6 == 0:
+		variant = "brute"
+		speed -= 18.0
+		health *= 1.8
+	elif wave_index >= 2 and spawn_number % 4 == 0:
+		variant = "runner"
+		speed += 34.0
+		health *= 0.75
+	enemy.speed = speed
+	enemy.max_health = health
+	enemy.health = health
+	if enemy.has_method("configure_visuals"):
+		enemy.configure_visuals(variant, effective_wave)
 
 func _on_enemy_reached_goal(enemy: Node) -> void:
 	print("Enemy reached goal")

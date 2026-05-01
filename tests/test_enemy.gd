@@ -4,6 +4,10 @@ const EnemyScript := preload("res://scripts/enemy.gd")
 
 func _initialize() -> void:
 	var enemy = EnemyScript.new()
+	enemy.configure_visuals("runner", 2)
+	_assert_equal(enemy.variant, "runner", "enemy should store visual variant")
+	_assert_equal(enemy.rank, 2, "enemy should store visual rank")
+	_assert_equal(enemy.color, enemy.body_color, "legacy color should stay synced with body color")
 	var points := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10)])
 	enemy.setup(points, 10.0)
 	_assert_equal(enemy.position, Vector2(0, 0), "enemy should start at first path point")
