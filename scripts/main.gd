@@ -23,6 +23,12 @@ var wave_spawn_timer := 0.0
 var wave_spawn_interval := 0.75
 var waves_cleared := 0
 var start_wave_button: Button = null
+var card_buttons: Array[Button] = []
+var card_choices: Array[Dictionary] = []
+var awaiting_card_choice := false
+var defense_damage_bonus := 0.0
+var defense_range_bonus := 0.0
+var defense_cooldown_multiplier := 1.0
 
 func _ready() -> void:
 	path = grid.find_path()
@@ -54,7 +60,7 @@ func _set_wave_button_enabled(enabled: bool) -> void:
 		start_wave_button.disabled = not enabled
 
 func start_wave() -> bool:
-	if wave_active:
+	if wave_active or awaiting_card_choice:
 		return false
 	if path.size() < 2:
 		push_warning("Cannot start wave: no valid path")
@@ -93,9 +99,75 @@ func _check_wave_completed() -> void:
 	if wave_spawned_count >= wave_enemies_to_spawn and wave_resolved_count >= wave_enemies_to_spawn:
 		wave_active = false
 		waves_cleared += 1
-		_set_wave_button_enabled(true)
 		print("Wave %s cleared" % wave_index)
+		_present_card_choices()
 		queue_redraw()
+
+func _get_card_pool() -> Array[Dictionary]:
+	return [
+		{"title": "Sharper Walls", "description": "+5 defense damage", "effect": "damage", "amount": 5.0},
+		{"title": "Longer Reach", "description": "+24 defense range", "effect": "range", "amount": 24.0},
+		{"title": "Faster Fire", "description": "-10% attack cooldown", "effect": "cooldown", "amount": 0.9},
+	]
+
+func _present_card_choices() -> void:
+	awaiting_card_choice = true
+	_set_wave_button_enabled(false)
+	_clear_card_buttons()
+	card_choices = _get_card_pool()
+	for i in range(card_choices.size()):
+		var card: Dictionary = card_choices[i]
+		var button := Button.new()
+		button.text = "%s
+%s" % [card["title"], card["description"]]
+		button.position = Vector2(64 + i * 190, 520)
+		button.size = Vector2(180, 72)
+		button.pressed.connect(select_card.bind(i))
+		card_buttons.append(button)
+		add_child(button)
+	print("Card choices ready")
+
+func _clear_card_buttons() -> void:
+	for button in card_buttons:
+		if is_instance_valid(button):
+			button.queue_free()
+	card_buttons.clear()
+
+func select_card(index: int) -> bool:
+	if not awaiting_card_choice:
+		return false
+	if index < 0 or index >= card_choices.size():
+		return false
+	var card: Dictionary = card_choices[index]
+	_apply_card(card)
+	awaiting_card_choice = false
+	_clear_card_buttons()
+	card_choices.clear()
+	_set_wave_button_enabled(true)
+	print("Card selected: %s" % card["title"])
+	queue_redraw()
+	return true
+
+func _apply_card(card: Dictionary) -> void:
+	match String(card["effect"]):
+		"damage":
+			defense_damage_bonus += float(card["amount"])
+			for cell in defense_units.keys():
+				var unit: Dictionary = defense_units[cell]
+				unit["damage"] = float(unit["damage"]) + float(card["amount"])
+				defense_units[cell] = unit
+		"range":
+			defense_range_bonus += float(card["amount"])
+			for cell in defense_units.keys():
+				var unit: Dictionary = defense_units[cell]
+				unit["range"] = float(unit["range"]) + float(card["amount"])
+				defense_units[cell] = unit
+		"cooldown":
+			defense_cooldown_multiplier *= float(card["amount"])
+			for cell in defense_units.keys():
+				var unit: Dictionary = defense_units[cell]
+				unit["cooldown_duration"] = float(unit["cooldown_duration"]) * float(card["amount"])
+				defense_units[cell] = unit
 
 func try_place_defense_at(world_pos: Vector2) -> bool:
 	var cell: Vector2i = grid_view.world_to_cell(world_pos)
@@ -137,10 +209,10 @@ func _on_enemy_died(enemy: Node) -> void:
 
 func _create_defense_unit() -> Dictionary:
 	return {
-		"range": CELL_SIZE * 2.5,
-		"damage": 10.0,
+		"range": CELL_SIZE * 2.5 + defense_range_bonus,
+		"damage": 10.0 + defense_damage_bonus,
 		"cooldown": 0.0,
-		"cooldown_duration": 0.6,
+		"cooldown_duration": 0.6 * defense_cooldown_multiplier,
 	}
 
 func _update_defenses(delta: float) -> void:
@@ -260,7 +332,9 @@ func _draw_path() -> void:
 
 func _draw_wave_status() -> void:
 	var status := "Wave %s | Spawned %s/%s | Resolved %s/%s | Cleared %s" % [wave_index, wave_spawned_count, wave_enemies_to_spawn, wave_resolved_count, wave_enemies_to_spawn, waves_cleared]
-	if not wave_active:
+	if awaiting_card_choice:
+		status = "Wave cleared | Choose 1 card"
+	elif not wave_active:
 		status = "Ready | Cleared %s | Press Start Wave" % waves_cleared
 	draw_string(ThemeDB.fallback_font, Vector2(224, 39), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#e5e7eb"))
 

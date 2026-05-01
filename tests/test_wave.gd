@@ -24,6 +24,8 @@ func _initialize() -> void:
 	_assert_equal(main.wave_resolved_count, main.wave_enemies_to_spawn, "wave should count resolved enemies")
 	_assert_true(not main.wave_active, "wave should end after all spawned enemies are resolved")
 	_assert_equal(main.waves_cleared, 1, "wave clear count should increment")
+	_assert_true(main.awaiting_card_choice, "wave clear should present card choices before next wave")
+	_assert_true(not main.start_wave(), "next wave should wait until a card is selected")
 
 	main.queue_free()
 	print("Wave tests passed")
@@ -38,3 +40,4 @@ func _assert_equal(actual, expected, message: String) -> void:
 	if actual != expected:
 		push_error("%s. Expected %s, got %s" % [message, expected, actual])
 		quit(1)
+
