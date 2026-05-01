@@ -22,6 +22,8 @@ var dead := false
 var max_health := 30.0
 var health := 30.0
 var bob_time := 0.0
+var hit_flash := 0.0
+var hit_jolt := 0.0
 
 func setup(p_path_points: PackedVector2Array, p_speed: float = 120.0) -> void:
 	path_points = p_path_points
@@ -31,6 +33,8 @@ func setup(p_path_points: PackedVector2Array, p_speed: float = 120.0) -> void:
 	dead = false
 	health = max_health
 	bob_time = 0.0
+	hit_flash = 0.0
+	hit_jolt = 0.0
 	if path_points.size() > 0:
 		position = path_points[0]
 	queue_redraw()
@@ -71,12 +75,16 @@ func update_path_preserving_position(p_path_points: PackedVector2Array) -> bool:
 	return true
 
 func _process(delta: float) -> void:
+	hit_flash = maxf(hit_flash - delta, 0.0)
+	hit_jolt = maxf(hit_jolt - delta * 5.0, 0.0)
 	advance(delta)
 
 func take_damage(amount: float) -> bool:
 	if dead or reached:
 		return false
 	health = maxf(health - amount, 0.0)
+	hit_flash = 0.16
+	hit_jolt = minf(hit_jolt + 0.55, 1.0)
 	queue_redraw()
 	if health <= 0.0:
 		dead = true
@@ -111,7 +119,8 @@ func advance(delta: float) -> bool:
 
 func _draw() -> void:
 	var bob := sin(bob_time) * 1.2
-	var body_offset := Vector2(0, bob)
+	var hit_shake := Vector2(sin(bob_time * 5.0) * hit_jolt * 4.0, -hit_jolt * 2.0)
+	var body_offset := Vector2(0, bob) + hit_shake
 	var facing := Vector2.RIGHT
 	if path_points.size() > target_index:
 		var to_target := path_points[target_index] - position
@@ -123,6 +132,9 @@ func _draw() -> void:
 
 	_draw_filled_ellipse(Rect2(Vector2(-radius * 1.05, radius * 0.35), Vector2(radius * 2.1, radius * 0.75)), shadow_color)
 	_draw_monster_body(body_offset, side)
+	if hit_flash > 0.0:
+		draw_arc(body_offset, radius + 4.0 + hit_flash * 12.0, 0.0, TAU, 28, Color(0.996, 0.953, 0.780, 0.85), 3.0)
+		draw_circle(body_offset + Vector2(side * radius * 0.55, -radius * 0.2), 4.0 + hit_flash * 14.0, Color(0.992, 0.902, 0.541, 0.8))
 	var health_ratio: float = clampf(health / max_health, 0.0, 1.0)
 	draw_rect(Rect2(Vector2(-radius, -radius - 8.0), Vector2(radius * 2.0, 3.0)), Color("#1e293b"), true)
 	draw_rect(Rect2(Vector2(-radius, -radius - 8.0), Vector2(radius * 2.0 * health_ratio, 3.0)), Color("#22c55e"), true)

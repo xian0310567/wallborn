@@ -15,6 +15,8 @@ func _initialize() -> void:
 	_assert_equal(enemy.health, enemy.max_health, "enemy should start at full health")
 	_assert_true(not enemy.take_damage(5.0), "non-lethal damage should not kill enemy")
 	_assert_equal(enemy.health, enemy.max_health - 5.0, "enemy should lose health")
+	_assert_true(enemy.hit_flash > 0.0, "enemy should flash after taking damage")
+	_assert_true(enemy.hit_jolt > 0.0, "enemy should jolt after taking damage")
 
 	enemy.advance(0.5)
 	_assert_equal(enemy.position, Vector2(5, 0), "enemy should move toward first target")

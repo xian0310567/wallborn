@@ -27,6 +27,10 @@ func _initialize() -> void:
 	main._update_defenses(1.0)
 	_assert_true(enemy.health < health_before, "defense update should damage enemy in range")
 	_assert_true(main.attack_effects.size() > 0, "defense attack should create a visible attack effect")
+	_assert_true(main.impact_effects.size() > 0, "defense attack should create a hit impact effect")
+
+	enemy.take_damage(enemy.health)
+	_assert_true(main.death_effects.size() > 0, "enemy death should create a death effect")
 
 	main.queue_free()
 	print("Combat tests passed")

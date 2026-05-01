@@ -14,6 +14,8 @@ var path: Array[Vector2i] = []
 var enemies: Array[Node] = []
 var defense_units: Dictionary = {}
 var attack_effects: Array[Dictionary] = []
+var impact_effects: Array[Dictionary] = []
+var death_effects: Array[Dictionary] = []
 
 var wave_index := 0
 var wave_active := false
@@ -42,7 +44,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_update_wave(delta)
 	_update_defenses(delta)
-	_update_attack_effects(delta)
+	_update_visual_effects(delta)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
@@ -227,6 +229,7 @@ func _on_enemy_reached_goal(enemy: Node) -> void:
 
 func _on_enemy_died(enemy: Node) -> void:
 	print("Enemy defeated")
+	_spawn_death_effect(enemy)
 	enemies.erase(enemy)
 	_record_enemy_resolved()
 	enemy.queue_free()
@@ -255,7 +258,8 @@ func _update_defenses(delta: float) -> void:
 				var from_pos: Vector2 = grid_view.cell_to_world(cell)
 				var to_pos: Vector2 = target.position
 				target.take_damage(float(unit["damage"]))
-				attack_effects.append({"from": from_pos, "to": to_pos, "time": 0.12})
+				attack_effects.append({"from": from_pos, "to": to_pos, "time": 0.14, "duration": 0.14})
+				impact_effects.append({"position": to_pos, "time": 0.18, "duration": 0.18})
 				unit["aim_to"] = to_pos
 				unit["flash"] = 0.16
 				cooldown = float(unit["cooldown_duration"])
@@ -278,8 +282,8 @@ func _find_target_for_defense(cell: Vector2i, attack_range: float) -> Node:
 			best_distance = distance
 	return best_enemy
 
-func _update_attack_effects(delta: float) -> void:
-	if attack_effects.is_empty():
+func _update_visual_effects(delta: float) -> void:
+	if attack_effects.is_empty() and impact_effects.is_empty() and death_effects.is_empty():
 		return
 	var remaining_effects: Array[Dictionary] = []
 	for effect in attack_effects:
@@ -288,7 +292,48 @@ func _update_attack_effects(delta: float) -> void:
 			effect["time"] = next_time
 			remaining_effects.append(effect)
 	attack_effects = remaining_effects
+	var remaining_impacts: Array[Dictionary] = []
+	for effect in impact_effects:
+		var next_time: float = float(effect["time"]) - delta
+		if next_time > 0.0:
+			effect["time"] = next_time
+			remaining_impacts.append(effect)
+	impact_effects = remaining_impacts
+	var remaining_deaths: Array[Dictionary] = []
+	for effect in death_effects:
+		var next_time: float = float(effect["time"]) - delta
+		if next_time > 0.0:
+			effect["time"] = next_time
+			remaining_deaths.append(effect)
+	death_effects = remaining_deaths
 	queue_redraw()
+
+func _spawn_death_effect(enemy: Node) -> void:
+	var base_color := Color("#f97316")
+	var enemy_radius := 12.0
+	var body_color_value = enemy.get("body_color")
+	if body_color_value != null:
+		base_color = body_color_value
+	var radius_value = enemy.get("radius")
+	if radius_value != null:
+		enemy_radius = float(radius_value)
+	var particles: Array[Dictionary] = []
+	for i in range(8):
+		var angle := TAU * float(i) / 8.0
+		var speed := 18.0 + float(i % 3) * 8.0
+		particles.append({
+			"offset": Vector2.ZERO,
+			"velocity": Vector2(cos(angle), sin(angle)) * speed,
+			"radius": 3.0 + float(i % 2),
+		})
+	death_effects.append({
+		"position": enemy.position,
+		"time": 0.34,
+		"duration": 0.34,
+		"radius": enemy_radius,
+		"color": base_color,
+		"particles": particles,
+	})
 
 func _repath_enemies() -> void:
 	for enemy in enemies:
@@ -435,8 +480,31 @@ func _draw_defense_unit(cell: Vector2i) -> void:
 
 func _draw_attack_effects() -> void:
 	for effect in attack_effects:
-		draw_line(effect["from"], effect["to"], Color("#f97316"), 4.0)
-		draw_circle(effect["to"], 5.0, Color("#fed7aa"))
+		var ratio: float = clampf(float(effect["time"]) / float(effect["duration"]), 0.0, 1.0)
+		var from_pos: Vector2 = effect["from"]
+		var to_pos: Vector2 = effect["to"]
+		var direction := (to_pos - from_pos).normalized()
+		var bolt_start := from_pos + direction * 16.0
+		var bolt_end := to_pos - direction * 4.0
+		draw_line(bolt_start, bolt_end, Color(0.992, 0.451, 0.141, ratio), 5.0 * ratio + 1.0)
+		draw_line(bolt_start, bolt_end, Color(1.0, 0.929, 0.686, ratio), 2.0 * ratio + 0.8)
+	for effect in impact_effects:
+		var ratio: float = clampf(float(effect["time"]) / float(effect["duration"]), 0.0, 1.0)
+		var pos: Vector2 = effect["position"]
+		draw_circle(pos, 4.0 + (1.0 - ratio) * 12.0, Color(0.996, 0.851, 0.651, 0.75 * ratio))
+		draw_arc(pos, 8.0 + (1.0 - ratio) * 16.0, 0.0, TAU, 20, Color(0.984, 0.451, 0.141, ratio), 2.0)
+	for effect in death_effects:
+		var ratio: float = clampf(float(effect["time"]) / float(effect["duration"]), 0.0, 1.0)
+		var progress := 1.0 - ratio
+		var pos: Vector2 = effect["position"]
+		var color: Color = effect["color"]
+		draw_circle(pos, float(effect["radius"]) * (1.0 + progress * 0.9), Color(1.0, 0.929, 0.686, 0.22 * ratio))
+		for particle in effect["particles"]:
+			var velocity: Vector2 = particle["velocity"]
+			var particle_pos: Vector2 = pos + velocity * progress
+			var particle_color := color
+			particle_color.a = 0.85 * ratio
+			draw_circle(particle_pos, float(particle["radius"]) * ratio, particle_color)
 
 func _draw_path() -> void:
 	if path.size() < 2:
