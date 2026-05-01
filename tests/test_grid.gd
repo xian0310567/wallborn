@@ -12,8 +12,11 @@ func _initialize() -> void:
 	_assert_true(not grid.is_buildable(grid.start_cell), "start cell should not be buildable")
 	_assert_true(not grid.is_buildable(grid.goal_cell), "goal cell should not be buildable")
 	_assert_true(grid.is_buildable(Vector2i(3, 3)), "empty cell should be buildable")
+	_assert_true(not grid.set_blocked(grid.start_cell), "start cell should reject defense placement")
+	_assert_true(not grid.set_blocked(grid.goal_cell), "goal cell should reject defense placement")
 	_assert_true(grid.set_blocked(Vector2i(3, 3)), "empty cell should be blockable")
 	_assert_true(not grid.is_buildable(Vector2i(3, 3)), "blocked cell should not be buildable")
+	_assert_true(not grid.set_blocked(Vector2i(3, 3)), "occupied cell should reject duplicate placement")
 	_assert_equal(grid.world_to_cell(grid.cell_to_world(Vector2i(2, 2))), Vector2i(2, 2), "cell/world conversion should round-trip")
 
 	grid.clear_blocked()

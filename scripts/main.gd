@@ -11,15 +11,26 @@ var path: Array[Vector2i] = []
 var enemies: Array[Node] = []
 
 func _ready() -> void:
-	# Temporary blockers to visually verify rerouting before placement UI exists.
-	for cell in [Vector2i(5, 4), Vector2i(6, 4), Vector2i(7, 4), Vector2i(8, 4)]:
-		grid.set_blocked(cell)
 	path = grid.find_path()
 	print("Wallborn boot OK")
 	print("Grid ready: %sx%s cells, cell_size=%s" % [grid.size.x, grid.size.y, grid.cell_size])
 	print("Path ready: %s cells" % path.size())
 	spawn_enemy()
 	queue_redraw()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		try_place_defense_at(event.position)
+
+func try_place_defense_at(world_pos: Vector2) -> bool:
+	var cell := grid.world_to_cell(world_pos, GRID_ORIGIN)
+	if not grid.set_blocked(cell):
+		print("Defense placement rejected: %s" % cell)
+		return false
+	path = grid.find_path()
+	print("Defense placed at %s. New path length: %s" % [cell, path.size()])
+	queue_redraw()
+	return true
 
 func spawn_enemy() -> void:
 	var path_points := _path_to_world_points(path)
@@ -67,6 +78,20 @@ func _draw_cells() -> void:
 				grid.CELL_BLOCKED:
 					fill = Color("#64748b")
 			draw_rect(rect.grow(-2), fill, true)
+			if grid.get_cell_type(cell) == grid.CELL_BLOCKED:
+				_draw_defense_unit(rect)
+
+func _draw_defense_unit(rect: Rect2) -> void:
+	var center := rect.get_center()
+	var half := rect.size.x * 0.28
+	var points := PackedVector2Array([
+		center + Vector2(0, -half),
+		center + Vector2(half, 0),
+		center + Vector2(0, half),
+		center + Vector2(-half, 0),
+	])
+	draw_colored_polygon(points, Color("#94a3b8"))
+	draw_polyline(PackedVector2Array([points[0], points[1], points[2], points[3], points[0]]), Color("#e2e8f0"), 2.0)
 
 func _draw_path() -> void:
 	if path.size() < 2:
