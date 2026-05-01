@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Internal test launcher for Wallborn builds",
+  "author": "Wallborn",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -10,10 +11,10 @@
     "dist:mac": "electron-builder --mac zip --publish never"
   },
   "dependencies": {
-    "adm-zip": "^0.5.16",
-    "electron": "^39.2.7"
+    "adm-zip": "^0.5.16"
   },
   "devDependencies": {
+    "electron": "^39.2.7",
     "electron-builder": "^26.0.12"
   },
   "build": {
