@@ -33,7 +33,7 @@ function readConfig() {
   try {
     return JSON.parse(fs.readFileSync(paths().config, 'utf8'));
   } catch {
-    return { githubToken: '', installedAssetUpdatedAt: '' };
+    return { installedAssetUpdatedAt: '' };
   }
 }
 
@@ -42,19 +42,17 @@ function writeConfig(config) {
   fs.writeFileSync(paths().config, JSON.stringify(config, null, 2));
 }
 
-function authHeaders(token, accept = 'application/vnd.github+json') {
-  const headers = {
+function githubHeaders(accept = 'application/vnd.github+json') {
+  return {
     'Accept': accept,
     'X-GitHub-Api-Version': '2022-11-28',
     'User-Agent': 'Wallborn-Test-Launcher',
   };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
 }
 
-async function fetchLatestRelease(token) {
+async function fetchLatestRelease() {
   const response = await fetch(`https://api.github.com/repos/${REPO}/releases/tags/${RELEASE_TAG}`, {
-    headers: authHeaders(token),
+    headers: githubHeaders(),
   });
   if (!response.ok) {
     throw new Error(`GitHub release request failed: ${response.status} ${response.statusText}`);
@@ -72,13 +70,12 @@ async function fetchLatestRelease(token) {
     assetId: asset.id,
     assetUpdatedAt: asset.updated_at,
     assetSize: asset.size,
+    browserDownloadUrl: asset.browser_download_url,
   };
 }
 
-async function downloadAsset(token, assetId, outputPath) {
-  const response = await fetch(`https://api.github.com/repos/${REPO}/releases/assets/${assetId}`, {
-    headers: authHeaders(token, 'application/octet-stream'),
-  });
+async function downloadAsset(url, outputPath) {
+  const response = await fetch(url, { headers: githubHeaders('application/octet-stream') });
   if (!response.ok) {
     throw new Error(`Download failed: ${response.status} ${response.statusText}`);
   }
@@ -107,10 +104,10 @@ function findFirst(dir, predicate) {
 async function installLatestBuild() {
   ensureDirs();
   const config = readConfig();
-  const release = await fetchLatestRelease(config.githubToken);
+  const release = await fetchLatestRelease();
   const p = paths();
   const output = path.join(p.downloads, release.assetName);
-  await downloadAsset(config.githubToken, release.assetId, output);
+  await downloadAsset(release.browserDownloadUrl, output);
 
   clearDir(p.latest);
   if (release.assetName.endsWith('.zip')) {
@@ -146,7 +143,7 @@ function launchInstalledBuild() {
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 860,
-    height: 620,
+    height: 560,
     title: 'Wallborn Test Launcher',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -159,19 +156,10 @@ function createWindow() {
 
 ipcMain.handle('config:get', () => {
   const config = readConfig();
-  return { hasToken: Boolean(config.githubToken), installedAssetUpdatedAt: config.installedAssetUpdatedAt || '' };
+  return { installedAssetUpdatedAt: config.installedAssetUpdatedAt || '' };
 });
 
-ipcMain.handle('config:set-token', (_event, token) => {
-  const config = readConfig();
-  writeConfig({ ...config, githubToken: token.trim() });
-  return { ok: true };
-});
-
-ipcMain.handle('release:check', async () => {
-  const config = readConfig();
-  return fetchLatestRelease(config.githubToken);
-});
+ipcMain.handle('release:check', async () => fetchLatestRelease());
 
 ipcMain.handle('build:update', async () => installLatestBuild());
 

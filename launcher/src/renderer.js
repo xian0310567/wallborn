@@ -1,5 +1,4 @@
 const statusEl = document.querySelector('#status');
-const tokenEl = document.querySelector('#token');
 const releaseEl = document.querySelector('#release');
 
 function log(message) {
@@ -8,7 +7,6 @@ function log(message) {
 
 async function refreshConfig() {
   const config = await window.wallborn.getConfig();
-  document.querySelector('#token-state').textContent = config.hasToken ? '저장됨' : '없음';
   document.querySelector('#installed').textContent = config.installedAssetUpdatedAt || '미설치';
 }
 
@@ -24,11 +22,6 @@ async function run(label, task) {
     throw error;
   }
 }
-
-document.querySelector('#save-token').addEventListener('click', async () => {
-  await run('토큰 저장', () => window.wallborn.setToken(tokenEl.value));
-  tokenEl.value = '';
-});
 
 document.querySelector('#check').addEventListener('click', async () => {
   const release = await run('최신 빌드 확인', () => window.wallborn.checkRelease());
