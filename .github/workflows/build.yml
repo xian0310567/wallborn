@@ -37,15 +37,10 @@ jobs:
           Copy-Item -Path "templates\templates\*" -Destination "$env:APPDATA\Godot\export_templates\$env:GODOT_VERSION.$env:GODOT_STATUS" -Recurse -Force
           & $env:GODOT_EXE --version
 
-      - name: Run tests
+      - name: Run QA/QC
         shell: pwsh
         run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -Godot "$env:GODOT_EXE"
-
-      - name: Build Windows and macOS exports
-        shell: pwsh
-        run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File tools/build.ps1 -Godot "$env:GODOT_EXE"
+          powershell -NoProfile -ExecutionPolicy Bypass -File tools/qaqc.ps1 -Godot "$env:GODOT_EXE"
 
       - name: Upload builds and logs as workflow artifact
         uses: actions/upload-artifact@v4
