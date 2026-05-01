@@ -1,12 +1,14 @@
 extends Node2D
 
 const WallbornGridScript := preload("res://scripts/wallborn_grid.gd")
+const EnemyScript := preload("res://scripts/enemy.gd")
 const GRID_SIZE := Vector2i(16, 9)
 const CELL_SIZE := 48
 const GRID_ORIGIN := Vector2(64, 64)
 
 var grid := WallbornGridScript.new(GRID_SIZE, CELL_SIZE)
 var path: Array[Vector2i] = []
+var enemies: Array[Node] = []
 
 func _ready() -> void:
 	# Temporary blockers to visually verify rerouting before placement UI exists.
@@ -16,7 +18,31 @@ func _ready() -> void:
 	print("Wallborn boot OK")
 	print("Grid ready: %sx%s cells, cell_size=%s" % [grid.size.x, grid.size.y, grid.cell_size])
 	print("Path ready: %s cells" % path.size())
+	spawn_enemy()
 	queue_redraw()
+
+func spawn_enemy() -> void:
+	var path_points := _path_to_world_points(path)
+	if path_points.size() < 2:
+		push_warning("Cannot spawn enemy: no valid path")
+		return
+	var enemy = EnemyScript.new()
+	enemy.setup(path_points, 120.0)
+	enemy.reached_goal.connect(_on_enemy_reached_goal)
+	enemies.append(enemy)
+	add_child(enemy)
+	print("Enemy spawned")
+
+func _on_enemy_reached_goal(enemy: Node) -> void:
+	print("Enemy reached goal")
+	enemies.erase(enemy)
+	enemy.queue_free()
+
+func _path_to_world_points(cell_path: Array[Vector2i]) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for cell in cell_path:
+		points.append(grid.cell_to_world(cell, GRID_ORIGIN))
+	return points
 
 func _draw() -> void:
 	_draw_background()
@@ -45,9 +71,7 @@ func _draw_cells() -> void:
 func _draw_path() -> void:
 	if path.size() < 2:
 		return
-	var points := PackedVector2Array()
-	for cell in path:
-		points.append(grid.cell_to_world(cell, GRID_ORIGIN))
+	var points := _path_to_world_points(path)
 	draw_polyline(points, Color("#facc15"), 4.0)
 	for point in points:
 		draw_circle(point, 5.0, Color("#fde68a"))

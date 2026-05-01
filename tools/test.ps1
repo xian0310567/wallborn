@@ -22,6 +22,12 @@ try {
     Write-Error "Godot grid test failed. See $LogPath"
   }
 
+  "== Enemy unit test ==" | Tee-Object -FilePath $LogPath -Append
+  & $Godot --headless --path $ProjectRoot --script res://tests/test_enemy.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Godot enemy test failed. See $LogPath"
+  }
+
   Write-Host "All tests passed. Log: $LogPath"
 }
 finally {
