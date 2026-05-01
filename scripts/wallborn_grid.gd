@@ -6,6 +6,13 @@ const CELL_START := 1
 const CELL_GOAL := 2
 const CELL_BLOCKED := 3
 
+const DIRECTIONS := [
+	Vector2i.RIGHT,
+	Vector2i.DOWN,
+	Vector2i.LEFT,
+	Vector2i.UP,
+]
+
 var size: Vector2i
 var cell_size: int
 var start_cell: Vector2i
@@ -42,6 +49,9 @@ func get_cell_type(cell: Vector2i) -> int:
 func is_buildable(cell: Vector2i) -> bool:
 	return is_in_bounds(cell) and get_cell_type(cell) == CELL_EMPTY
 
+func is_walkable(cell: Vector2i) -> bool:
+	return is_in_bounds(cell) and not blocked_cells.has(cell)
+
 func set_blocked(cell: Vector2i, blocked: bool = true) -> bool:
 	if not is_buildable(cell) and blocked:
 		return false
@@ -50,3 +60,42 @@ func set_blocked(cell: Vector2i, blocked: bool = true) -> bool:
 	else:
 		blocked_cells.erase(cell)
 	return true
+
+func clear_blocked() -> void:
+	blocked_cells.clear()
+
+func find_path(from_cell: Vector2i = start_cell, to_cell: Vector2i = goal_cell) -> Array[Vector2i]:
+	if not is_walkable(from_cell) or not is_walkable(to_cell):
+		return []
+
+	var frontier: Array[Vector2i] = [from_cell]
+	var came_from: Dictionary = {from_cell: from_cell}
+	var index := 0
+
+	while index < frontier.size():
+		var current := frontier[index]
+		index += 1
+
+		if current == to_cell:
+			break
+
+		for direction in DIRECTIONS:
+			var next: Vector2i = current + direction
+			if not is_walkable(next) or came_from.has(next):
+				continue
+			frontier.append(next)
+			came_from[next] = current
+
+	if not came_from.has(to_cell):
+		return []
+
+	var path: Array[Vector2i] = []
+	var current := to_cell
+	while current != from_cell:
+		path.push_front(current)
+		current = came_from[current]
+	path.push_front(from_cell)
+	return path
+
+func has_valid_path() -> bool:
+	return not find_path().is_empty()
