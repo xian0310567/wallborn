@@ -8,6 +8,9 @@ func _initialize() -> void:
 	enemy.setup(points, 10.0)
 	_assert_equal(enemy.position, Vector2(0, 0), "enemy should start at first path point")
 	_assert_true(not enemy.reached, "enemy should not start reached")
+	_assert_equal(enemy.health, enemy.max_health, "enemy should start at full health")
+	_assert_true(not enemy.take_damage(5.0), "non-lethal damage should not kill enemy")
+	_assert_equal(enemy.health, enemy.max_health - 5.0, "enemy should lose health")
 
 	enemy.advance(0.5)
 	_assert_equal(enemy.position, Vector2(5, 0), "enemy should move toward first target")
@@ -25,6 +28,12 @@ func _initialize() -> void:
 	_assert_equal(enemy.position, Vector2(10, 5), "enemy should follow replacement path after repath")
 
 	_assert_true(not enemy.update_path_preserving_position(PackedVector2Array([Vector2(0, 0)])), "enemy should reject invalid replacement path")
+	_assert_true(enemy.take_damage(enemy.health), "lethal damage should kill enemy")
+	_assert_true(enemy.dead, "enemy should mark dead after lethal damage")
+	_assert_true(not enemy.advance(1.0), "dead enemy should not advance")
+
+	# Reset for goal-reaching assertions.
+	enemy.setup(PackedVector2Array([Vector2(10, 5), Vector2(15, 5)]), 10.0)
 
 	enemy.advance(1.0)
 	_assert_equal(enemy.position, Vector2(15, 5), "enemy should reach goal")
