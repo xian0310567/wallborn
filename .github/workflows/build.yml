@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Test and export desktop builds
@@ -44,7 +47,7 @@ jobs:
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File tools/build.ps1 -Godot "$env:GODOT_EXE"
 
-      - name: Upload builds and logs
+      - name: Upload builds and logs as workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: wallborn-desktop-builds
@@ -52,3 +55,30 @@ jobs:
             builds/windows/Wallborn.exe
             builds/macos/Wallborn.zip
             logs/*.log
+
+      - name: Publish latest test release
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $tag = "latest-test-build"
+          $notes = @"
+          Automated Wallborn test build.
+
+          Commit: $env:GITHUB_SHA
+          Branch: $env:GITHUB_REF_NAME
+          Run: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID
+          "@
+
+          gh release delete $tag --yes --cleanup-tag 2>$null || $true
+          gh release create $tag `
+            builds/windows/Wallborn.exe `
+            builds/macos/Wallborn.zip `
+            logs/test-last.log `
+            logs/build-last.log `
+            --title "Latest Wallborn Test Build" `
+            --notes $notes `
+            --prerelease `
+            --target $env:GITHUB_SHA
