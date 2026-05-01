@@ -19,6 +19,7 @@ var wave_spawned_count := 0
 var wave_resolved_count := 0
 var wave_spawn_timer := 0.0
 var wave_spawn_interval := 0.65
+var path_reroute_flash := 0.0
 
 var board_root: Node3D
 var marker_root: Node3D
@@ -42,6 +43,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_update_wave(delta)
 	_update_enemies(delta)
+	_update_path_flash(delta)
 
 func _create_roots() -> void:
 	board_root = Node3D.new()
@@ -156,6 +158,7 @@ func try_place_defense_at_world(world_pos: Vector3) -> bool:
 		return false
 	defense_units[cell] = true
 	path = grid.find_path()
+	path_reroute_flash = 0.75
 	_add_defense_unit(cell)
 	_rebuild_board()
 	_refresh_path_markers()
@@ -271,15 +274,61 @@ func _add_defense_unit(cell: Vector2i) -> void:
 
 func _refresh_path_markers() -> void:
 	_clear_children(marker_root)
-	for cell in path:
+	if path.is_empty():
+		return
+
+	var flash_ratio := clampf(path_reroute_flash / 0.75, 0.0, 1.0)
+	var path_color := Color("#facc15").lerp(Color("#fff7ad"), flash_ratio)
+	var segment_color := Color("#ca8a04").lerp(Color("#fde68a"), flash_ratio)
+	var pulse_color := Color("#f97316").lerp(Color("#fef3c7"), flash_ratio)
+
+	for i in range(path.size()):
+		var cell := path[i]
 		var marker := MeshInstance3D.new()
-		marker.name = "Path_%s_%s" % [cell.x, cell.y]
+		marker.name = "PathTile_%s_%s" % [cell.x, cell.y]
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.34, 0.035, 0.34)
+		mesh.size = Vector3(0.54, 0.035, 0.54)
 		marker.mesh = mesh
-		marker.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.035, 0.0)
-		marker.material_override = _make_material(Color("#facc15"))
+		marker.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.045 + flash_ratio * 0.025, 0.0)
+		marker.material_override = _make_material(path_color)
 		marker_root.add_child(marker)
+
+		if path_reroute_flash > 0.0 and (i == 0 or i == path.size() - 1 or i % 3 == 0):
+			var pulse := MeshInstance3D.new()
+			pulse.name = "ReroutePulse_%s_%s" % [cell.x, cell.y]
+			var pulse_mesh := CylinderMesh.new()
+			pulse_mesh.top_radius = 0.24 + (1.0 - flash_ratio) * 0.28
+			pulse_mesh.bottom_radius = pulse_mesh.top_radius
+			pulse_mesh.height = 0.025
+			pulse.mesh = pulse_mesh
+			pulse.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.085, 0.0)
+			pulse.material_override = _make_material(pulse_color)
+			marker_root.add_child(pulse)
+
+	for i in range(path.size() - 1):
+		var from_pos: Vector3 = grid_view.cell_to_world(path[i]) + Vector3(0.0, 0.06, 0.0)
+		var to_pos: Vector3 = grid_view.cell_to_world(path[i + 1]) + Vector3(0.0, 0.06, 0.0)
+		var segment := _create_path_segment(from_pos, to_pos, segment_color)
+		marker_root.add_child(segment)
+
+func _create_path_segment(from_pos: Vector3, to_pos: Vector3, color: Color) -> MeshInstance3D:
+	var delta := to_pos - from_pos
+	var length := Vector2(delta.x, delta.z).length()
+	var segment := MeshInstance3D.new()
+	segment.name = "PathSegment"
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.22, 0.03, maxf(length, 0.01))
+	segment.mesh = mesh
+	segment.position = (from_pos + to_pos) * 0.5
+	segment.rotation.y = atan2(delta.x, delta.z)
+	segment.material_override = _make_material(color)
+	return segment
+
+func _update_path_flash(delta: float) -> void:
+	if path_reroute_flash <= 0.0:
+		return
+	path_reroute_flash = maxf(path_reroute_flash - delta, 0.0)
+	_refresh_path_markers()
 
 func _update_status() -> void:
 	if status_label == null:

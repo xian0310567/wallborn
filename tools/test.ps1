@@ -52,6 +52,12 @@ try {
     Write-Error "Godot 3D enemy test failed. See $LogPath"
   }
 
+  "== 3D path visual unit test ==" | Tee-Object -FilePath $LogPath -Append
+  & $Godot --headless --path $ProjectRoot --script res://tests/test_main_3d_path_visuals.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Godot 3D path visual test failed. See $LogPath"
+  }
+
   "== Enemy unit test ==" | Tee-Object -FilePath $LogPath -Append
   & $Godot --headless --path $ProjectRoot --script res://tests/test_enemy.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
   if ($LASTEXITCODE -ne 0) {
