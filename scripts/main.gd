@@ -215,6 +215,8 @@ func _create_defense_unit() -> Dictionary:
 		"damage": 10.0 + defense_damage_bonus,
 		"cooldown": 0.0,
 		"cooldown_duration": 0.6 * defense_cooldown_multiplier,
+		"flash": 0.0,
+		"aim_to": Vector2.ZERO,
 	}
 
 func _update_defenses(delta: float) -> void:
@@ -224,6 +226,7 @@ func _update_defenses(delta: float) -> void:
 	for cell in defense_units.keys():
 		var unit: Dictionary = defense_units[cell]
 		var cooldown: float = maxf(float(unit.get("cooldown", 0.0)) - delta, 0.0)
+		unit["flash"] = maxf(float(unit.get("flash", 0.0)) - delta, 0.0)
 		if cooldown <= 0.0:
 			var target: Node = _find_target_for_defense(cell, float(unit["range"]))
 			if target != null and target.has_method("take_damage"):
@@ -231,6 +234,8 @@ func _update_defenses(delta: float) -> void:
 				var to_pos: Vector2 = target.position
 				target.take_damage(float(unit["damage"]))
 				attack_effects.append({"from": from_pos, "to": to_pos, "time": 0.12})
+				unit["aim_to"] = to_pos
+				unit["flash"] = 0.16
 				cooldown = float(unit["cooldown_duration"])
 				did_attack = true
 		unit["cooldown"] = cooldown
@@ -361,13 +366,50 @@ func _draw_core(cell: Vector2i) -> void:
 
 func _draw_defense_unit(cell: Vector2i) -> void:
 	var center: Vector2 = grid_view.cell_to_world(cell)
-	var half: float = minf(grid_view.basis_x.length(), grid_view.basis_y.length()) * 0.32
-	var base := Rect2(center - Vector2(half, half * 0.55), Vector2(half * 2.0, half * 1.1))
-	draw_rect(Rect2(base.position + Vector2(0, 6), base.size), Color(0, 0, 0, 0.26), true)
-	draw_rect(base, Color("#64748b"), true)
-	draw_rect(base, Color("#cbd5e1"), false, 2.0)
-	draw_rect(Rect2(center + Vector2(-5, -half - 8), Vector2(10, half + 10)), Color("#e2e8f0"), true)
-	draw_circle(center + Vector2(0, -half - 10), 7.0, Color("#f97316"))
+	var unit: Dictionary = defense_units.get(cell, {})
+	var aim_to: Vector2 = unit.get("aim_to", center + Vector2(0, -1))
+	var aim_direction := (aim_to - center).normalized()
+	if aim_direction == Vector2.ZERO:
+		aim_direction = Vector2(0, -1)
+	var flash: float = float(unit.get("flash", 0.0))
+
+	var wall_top := PackedVector2Array([
+		center + Vector2(-25, 4),
+		center + Vector2(0, -12),
+		center + Vector2(25, 4),
+		center + Vector2(0, 20),
+	])
+	var wall_side := PackedVector2Array([
+		wall_top[0],
+		wall_top[3],
+		wall_top[3] + Vector2(0, 9),
+		wall_top[0] + Vector2(0, 9),
+	])
+	var wall_front := PackedVector2Array([
+		wall_top[3],
+		wall_top[2],
+		wall_top[2] + Vector2(0, 9),
+		wall_top[3] + Vector2(0, 9),
+	])
+	draw_colored_polygon(PackedVector2Array([wall_top[0] + Vector2(0, 10), wall_top[1] + Vector2(0, 10), wall_top[2] + Vector2(0, 10), wall_top[3] + Vector2(0, 10)]), Color(0, 0, 0, 0.28))
+	draw_colored_polygon(wall_side, Color("#334155"))
+	draw_colored_polygon(wall_front, Color("#475569"))
+	draw_colored_polygon(wall_top, Color("#64748b"))
+	draw_polyline(PackedVector2Array([wall_top[0], wall_top[1], wall_top[2], wall_top[3], wall_top[0]]), Color("#e2e8f0"), 2.0)
+
+	for offset in [-14, 0, 14]:
+		draw_rect(Rect2(center + Vector2(offset - 5, -15), Vector2(10, 9)), Color("#94a3b8"), true)
+
+	var turret_center := center + Vector2(0, -16)
+	var muzzle := turret_center + aim_direction * 25.0
+	draw_circle(turret_center + Vector2(0, 4), 13.0, Color(0, 0, 0, 0.22))
+	draw_circle(turret_center, 12.0, Color("#cbd5e1"))
+	draw_line(turret_center, muzzle, Color("#e2e8f0"), 7.0)
+	draw_line(turret_center, muzzle, Color("#f97316"), 3.0)
+	draw_circle(turret_center, 5.0, Color("#0f172a"))
+	if flash > 0.0:
+		draw_circle(muzzle, 9.0 + flash * 18.0, Color("#fed7aa"))
+		draw_circle(muzzle, 5.0, Color("#fb923c"))
 
 func _draw_attack_effects() -> void:
 	for effect in attack_effects:
