@@ -1,0 +1,17 @@
+# Godot imports/cache
+.godot/
+.import/
+
+# Godot generated
+*.translation
+export_presets.cfg
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build artifacts
+builds/
+logs/
