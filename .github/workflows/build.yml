@@ -1,0 +1,54 @@
+name: Build Wallborn
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Test and export desktop builds
+    runs-on: windows-latest
+
+    env:
+      GODOT_VERSION: 4.6.2
+      GODOT_STATUS: stable
+      GODOT_EXE: ${{ github.workspace }}\godot\Godot_v4.6.2-stable_win64_console.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Godot and export templates
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = "$env:GODOT_VERSION-$env:GODOT_STATUS"
+          New-Item -ItemType Directory -Force -Path godot | Out-Null
+          Invoke-WebRequest -Uri "https://github.com/godotengine/godot/releases/download/$version/Godot_v$version`_win64.exe.zip" -OutFile godot.zip
+          Invoke-WebRequest -Uri "https://github.com/godotengine/godot/releases/download/$version/Godot_v$version`_export_templates.tpz" -OutFile templates.tpz
+          tar -xf godot.zip -C godot
+          New-Item -ItemType Directory -Force -Path "$env:APPDATA\Godot\export_templates\$env:GODOT_VERSION.$env:GODOT_STATUS" | Out-Null
+          New-Item -ItemType Directory -Force -Path templates | Out-Null
+          tar -xf templates.tpz -C templates
+          Copy-Item -Path "templates\templates\*" -Destination "$env:APPDATA\Godot\export_templates\$env:GODOT_VERSION.$env:GODOT_STATUS" -Recurse -Force
+          & $env:GODOT_EXE --version
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -Godot "$env:GODOT_EXE"
+
+      - name: Build Windows and macOS exports
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File tools/build.ps1 -Godot "$env:GODOT_EXE"
+
+      - name: Upload builds and logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallborn-desktop-builds
+          path: |
+            builds/windows/Wallborn.exe
+            builds/macos/Wallborn.zip
+            logs/*.log
