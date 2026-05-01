@@ -16,6 +16,12 @@ try {
     Write-Error "Godot smoke test failed. See $LogPath"
   }
 
+  "== 3D scene smoke test ==" | Tee-Object -FilePath $LogPath -Append
+  & $Godot --headless --path $ProjectRoot --scene res://scenes/main_3d.tscn --quit-after 1 2>&1 | Tee-Object -FilePath $LogPath -Append
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Godot 3D scene smoke test failed. See $LogPath"
+  }
+
   "== Grid unit test ==" | Tee-Object -FilePath $LogPath -Append
   & $Godot --headless --path $ProjectRoot --script res://tests/test_grid.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
   if ($LASTEXITCODE -ne 0) {
@@ -26,6 +32,24 @@ try {
   & $Godot --headless --path $ProjectRoot --script res://tests/test_grid_view.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
   if ($LASTEXITCODE -ne 0) {
     Write-Error "Godot grid view test failed. See $LogPath"
+  }
+
+  "== 3D grid view unit test ==" | Tee-Object -FilePath $LogPath -Append
+  & $Godot --headless --path $ProjectRoot --script res://tests/test_grid_view_3d.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Godot 3D grid view test failed. See $LogPath"
+  }
+
+  "== 3D camera rig unit test ==" | Tee-Object -FilePath $LogPath -Append
+  & $Godot --headless --path $ProjectRoot --script res://tests/test_camera_rig_3d.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Godot 3D camera rig test failed. See $LogPath"
+  }
+
+  "== 3D enemy unit test ==" | Tee-Object -FilePath $LogPath -Append
+  & $Godot --headless --path $ProjectRoot --script res://tests/test_enemy_3d.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Godot 3D enemy test failed. See $LogPath"
   }
 
   "== Enemy unit test ==" | Tee-Object -FilePath $LogPath -Append
