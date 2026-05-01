@@ -11,8 +11,14 @@
       .card { background: #1f2937; border: 1px solid #374151; border-radius: 14px; padding: 18px; margin: 16px 0; }
       button { background: #10b981; color: #06251a; border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; margin: 4px; cursor: pointer; }
       button.secondary { background: #60a5fa; color: #081526; }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      button.update-available { background: #f97316; color: #111827; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.25); }
       pre { white-space: pre-wrap; word-break: break-word; background: #0f172a; border-radius: 10px; padding: 12px; min-height: 100px; line-height: 1.45; }
       .muted { color: #9ca3af; }
+      .state { display: inline-block; margin: 8px 0 10px; padding: 8px 10px; border-radius: 10px; font-weight: 700; background: #0f172a; color: #cbd5e1; }
+      .state.latest { color: #bbf7d0; background: #064e3b; }
+      .state.update { color: #111827; background: #f97316; }
+      .state.error { color: #fecaca; background: #7f1d1d; }
       strong { color: #f8fafc; }
     </style>
   </head>
@@ -24,8 +30,11 @@
       <section class="card">
         <h2>빌드</h2>
         <p>설치된 빌드: <strong id="installed">확인 중</strong></p>
-        <button id="check" class="secondary">최신 빌드 확인</button>
-        <button id="update">업데이트</button>
+        <p>최신 빌드: <strong id="latest">자동 확인 중</strong></p>
+        <div id="update-state" class="state">자동 확인 중</div>
+        <p class="muted">마지막 확인: <span id="last-check">-</span></p>
+        <button id="check" class="secondary">지금 확인</button>
+        <button id="update" disabled>업데이트</button>
         <button id="launch">실행</button>
         <button id="open-folder" class="secondary">런처 폴더 열기</button>
       </section>
