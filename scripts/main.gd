@@ -9,7 +9,7 @@ const GRID_ORIGIN := Vector2(192, 128)
 const SCREEN_SIZE := Vector2(1280, 720)
 
 var grid := WallbornGridScript.new(GRID_SIZE, CELL_SIZE)
-var grid_view = WallbornGridViewScript.top_down(GRID_ORIGIN, CELL_SIZE)
+var grid_view = WallbornGridViewScript.dimetric_2_5d(Vector2(520, 145), 64, 32)
 var path: Array[Vector2i] = []
 var enemies: Array[Node] = []
 var defense_units: Dictionary = {}
@@ -298,13 +298,26 @@ func _draw_background() -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(64, 48), "WALLBORN", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color("#f8fafc"))
 	draw_string(ThemeDB.fallback_font, Vector2(64, 72), "Roguelike wall-defense prototype", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#94a3b8"))
 
+func _get_board_bounds() -> Rect2:
+	var has_point := false
+	var min_point := Vector2.ZERO
+	var max_point := Vector2.ZERO
+	for cell in grid_view.get_cells_in_draw_order(grid.size):
+		for point in grid_view.cell_corners(cell):
+			if not has_point:
+				min_point = point
+				max_point = point
+				has_point = true
+			else:
+				min_point = min_point.min(point)
+				max_point = max_point.max(point)
+	return Rect2(min_point, max_point - min_point)
+
 func _draw_board_frame() -> void:
-	var board_size := Vector2(grid.size.x * CELL_SIZE, grid.size.y * CELL_SIZE)
-	var frame := Rect2(GRID_ORIGIN - Vector2(18, 18), board_size + Vector2(36, 36))
-	draw_rect(frame, Color("#111827"), true)
-	draw_rect(frame, Color("#475569"), false, 2.0)
-	var shadow := Rect2(frame.position + Vector2(8, 8), frame.size)
-	draw_rect(shadow, Color(0, 0, 0, 0.22), true)
+	var bounds := _get_board_bounds().grow(28.0)
+	draw_rect(Rect2(bounds.position + Vector2(12, 14), bounds.size), Color(0, 0, 0, 0.28), true)
+	draw_rect(bounds, Color("#0f172a"), true)
+	draw_rect(bounds, Color("#475569"), false, 2.0)
 
 func _draw_cells() -> void:
 	for cell in grid_view.get_cells_in_draw_order(grid.size):
@@ -317,8 +330,13 @@ func _draw_cells() -> void:
 				fill = Color("#7f1d1d")
 			grid.CELL_BLOCKED:
 				fill = Color("#475569")
+		var side_depth := Vector2(0, 7)
+		var side_color := Color("#0f172a")
+		if grid.get_cell_type(cell) == grid.CELL_BLOCKED:
+			side_color = Color("#334155")
+		draw_colored_polygon(PackedVector2Array([corners[1], corners[2], corners[2] + side_depth, corners[1] + side_depth]), side_color)
+		draw_colored_polygon(PackedVector2Array([corners[2], corners[3], corners[3] + side_depth, corners[2] + side_depth]), side_color.darkened(0.18))
 		draw_colored_polygon(corners, fill)
-		draw_colored_polygon(PackedVector2Array([corners[1], corners[2], corners[2] + Vector2(0, 5), corners[1] + Vector2(0, 5)]), Color(0, 0, 0, 0.18))
 		draw_polyline(PackedVector2Array([corners[0], corners[1], corners[2], corners[3], corners[0]]), Color("#334155"), 1.0)
 		if grid.get_cell_type(cell) == grid.CELL_START:
 			_draw_spawn_gate(cell)
@@ -329,12 +347,14 @@ func _draw_cells() -> void:
 
 func _draw_spawn_gate(cell: Vector2i) -> void:
 	var center: Vector2 = grid_view.cell_to_world(cell)
+	draw_circle(center + Vector2(0, 6), 19.0, Color(0, 0, 0, 0.25))
 	draw_circle(center, 17.0, Color("#22c55e"))
 	draw_arc(center, 23.0, 0.0, TAU, 32, Color("#bbf7d0"), 3.0)
 	draw_string(ThemeDB.fallback_font, center + Vector2(-12, 6), "IN", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#052e16"))
 
 func _draw_core(cell: Vector2i) -> void:
 	var center: Vector2 = grid_view.cell_to_world(cell)
+	draw_circle(center + Vector2(0, 7), 21.0, Color(0, 0, 0, 0.28))
 	draw_circle(center, 19.0, Color("#ef4444"))
 	draw_circle(center, 10.0, Color("#fee2e2"))
 	draw_arc(center, 25.0, 0.0, TAU, 32, Color("#fecaca"), 3.0)
@@ -343,6 +363,7 @@ func _draw_defense_unit(cell: Vector2i) -> void:
 	var center: Vector2 = grid_view.cell_to_world(cell)
 	var half: float = minf(grid_view.basis_x.length(), grid_view.basis_y.length()) * 0.32
 	var base := Rect2(center - Vector2(half, half * 0.55), Vector2(half * 2.0, half * 1.1))
+	draw_rect(Rect2(base.position + Vector2(0, 6), base.size), Color(0, 0, 0, 0.26), true)
 	draw_rect(base, Color("#64748b"), true)
 	draw_rect(base, Color("#cbd5e1"), false, 2.0)
 	draw_rect(Rect2(center + Vector2(-5, -half - 8), Vector2(10, half + 10)), Color("#e2e8f0"), true)
