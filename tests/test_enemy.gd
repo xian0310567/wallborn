@@ -1,4 +1,4 @@
-extends SceneTree
+﻿extends SceneTree
 
 const EnemyScript := preload("res://scripts/enemy.gd")
 
@@ -17,8 +17,17 @@ func _initialize() -> void:
 	_assert_equal(enemy.position, Vector2(10, 0), "enemy should reach second path point")
 	_assert_true(not enemy.reached, "enemy should continue toward final point")
 
+	var reroute_points := PackedVector2Array([enemy.position, Vector2(10, 5), Vector2(15, 5)])
+	_assert_true(enemy.update_path_preserving_position(reroute_points), "enemy should accept a replacement path")
+	_assert_equal(enemy.path_points[0], enemy.position, "replacement path should start at current enemy position")
+	_assert_equal(enemy.target_index, 1, "replacement path should target the next point")
+	enemy.advance(0.5)
+	_assert_equal(enemy.position, Vector2(10, 5), "enemy should follow replacement path after repath")
+
+	_assert_true(not enemy.update_path_preserving_position(PackedVector2Array([Vector2(0, 0)])), "enemy should reject invalid replacement path")
+
 	enemy.advance(1.0)
-	_assert_equal(enemy.position, Vector2(10, 10), "enemy should reach goal")
+	_assert_equal(enemy.position, Vector2(15, 5), "enemy should reach goal")
 	_assert_true(enemy.reached, "enemy should mark reached at final path point")
 	enemy.free()
 

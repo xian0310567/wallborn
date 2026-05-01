@@ -19,6 +19,16 @@ func setup(p_path_points: PackedVector2Array, p_speed: float = 120.0) -> void:
 		position = path_points[0]
 	queue_redraw()
 
+func update_path_preserving_position(p_path_points: PackedVector2Array) -> bool:
+	if p_path_points.size() < 2:
+		return false
+	path_points = p_path_points
+	path_points[0] = position
+	target_index = 1
+	reached = false
+	queue_redraw()
+	return true
+
 func _process(delta: float) -> void:
 	advance(delta)
 

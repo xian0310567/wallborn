@@ -30,6 +30,7 @@ func try_place_defense_at(world_pos: Vector2) -> bool:
 		print("Defense placement rejected: %s" % cell)
 		return false
 	path = grid.find_path()
+	_repath_enemies()
 	print("Defense placed at %s. New path length: %s" % [cell, path.size()])
 	queue_redraw()
 	return true
@@ -50,6 +51,18 @@ func _on_enemy_reached_goal(enemy: Node) -> void:
 	print("Enemy reached goal")
 	enemies.erase(enemy)
 	enemy.queue_free()
+
+func _repath_enemies() -> void:
+	for enemy in enemies:
+		if not is_instance_valid(enemy):
+			continue
+		var enemy_cell: Vector2i = grid_view.world_to_cell(enemy.position)
+		var enemy_path: Array[Vector2i] = grid.find_path(enemy_cell, grid.goal_cell)
+		if enemy_path.size() < 2:
+			push_warning("Cannot repath enemy from cell %s" % enemy_cell)
+			continue
+		if enemy.has_method("update_path_preserving_position"):
+			enemy.update_path_preserving_position(_path_to_world_points(enemy_path))
 
 func _path_to_world_points(cell_path: Array[Vector2i]) -> PackedVector2Array:
 	var points := PackedVector2Array()
