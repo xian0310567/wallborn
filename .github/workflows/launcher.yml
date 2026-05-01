@@ -1,0 +1,60 @@
+name: Build Wallborn Test Launcher
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'launcher/**'
+      - '.github/workflows/launcher.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac-launcher:
+    name: Build macOS launcher
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: launcher/package-lock.json
+
+      - name: Install launcher dependencies
+        working-directory: launcher
+        run: npm ci
+
+      - name: Check launcher JavaScript
+        working-directory: launcher
+        run: npm run check
+
+      - name: Build macOS launcher zip
+        working-directory: launcher
+        run: npm run dist:mac
+
+      - name: Upload launcher artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallborn-test-launcher-mac
+          path: launcher/dist/*.zip
+
+      - name: Publish latest launcher release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="latest-launcher-build"
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" launcher/dist/*.zip \
+            --title "Latest Wallborn Test Launcher" \
+            --notes "Automated macOS launcher build for commit $GITHUB_SHA" \
+            --prerelease \
+            --target "$GITHUB_SHA"

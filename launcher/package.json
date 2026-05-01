@@ -6,11 +6,31 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js"
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js",
+    "dist:mac": "electron-builder --mac zip --publish never"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
     "electron": "^39.2.7"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.wallborn.testlauncher",
+    "productName": "Wallborn Test Launcher",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.games",
+      "target": [
+        "zip"
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    }
+  }
 }
