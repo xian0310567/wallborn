@@ -3,13 +3,13 @@ class_name CameraRig3D
 
 @export var move_speed := 6.0
 @export var drag_speed := 0.012
-@export var default_ortho_size := 11.0
-@export var min_ortho_size := 7.0
-@export var max_ortho_size := 14.0
+@export var default_ortho_size := 10.2
+@export var min_ortho_size := 6.6
+@export var max_ortho_size := 13.2
 @export var zoom_step := 0.75
 @export var yaw_step_degrees := 90.0
-@export var camera_distance := 8.5
-@export var camera_height := 6.4
+@export var camera_distance := 7.8
+@export var camera_height := 5.9
 @export var bounds_margin := 2.0
 
 var yaw_degrees := 45.0

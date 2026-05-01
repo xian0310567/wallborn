@@ -57,27 +57,41 @@ func _create_default_visuals() -> void:
 	var body := MeshInstance3D.new()
 	body.name = "Body"
 	var body_mesh := SphereMesh.new()
-	body_mesh.radius = 0.24
-	body_mesh.height = 0.48
+	body_mesh.radial_segments = 8
+	body_mesh.rings = 4
+	body_mesh.radius = 0.28
+	body_mesh.height = 0.52
 	body.mesh = body_mesh
-	body.position = Vector3(0.0, 0.34, 0.0)
-	body.material_override = _make_material(Color("#fb923c"))
+	body.position = Vector3(0.0, 0.38, 0.0)
+	body.scale = Vector3(1.0, 0.86, 1.12)
+	body.material_override = _make_material(Color("#f97316"))
 	add_child(body)
 
-	var face := MeshInstance3D.new()
-	face.name = "Face"
-	var face_mesh := BoxMesh.new()
-	face_mesh.size = Vector3(0.18, 0.1, 0.06)
-	face.mesh = face_mesh
-	face.position = Vector3(0.0, 0.39, -0.21)
-	face.material_override = _make_material(Color("#111827"))
-	add_child(face)
+	for x in [-0.08, 0.08]:
+		var eye := MeshInstance3D.new()
+		eye.name = "Eye"
+		var eye_mesh := BoxMesh.new()
+		eye_mesh.size = Vector3(0.055, 0.055, 0.035)
+		eye.mesh = eye_mesh
+		eye.position = Vector3(x, 0.43, -0.25)
+		eye.material_override = _make_material(Color("#fff7ed"))
+		add_child(eye)
+
+	var crest := MeshInstance3D.new()
+	crest.name = "Crest"
+	var crest_mesh := BoxMesh.new()
+	crest_mesh.size = Vector3(0.16, 0.12, 0.18)
+	crest.mesh = crest_mesh
+	crest.position = Vector3(0.0, 0.62, 0.02)
+	crest.rotation_degrees.x = 18.0
+	crest.material_override = _make_material(Color("#fed7aa"))
+	add_child(crest)
 
 	var shadow := MeshInstance3D.new()
 	shadow.name = "Shadow"
 	var shadow_mesh := CylinderMesh.new()
-	shadow_mesh.top_radius = 0.28
-	shadow_mesh.bottom_radius = 0.28
+	shadow_mesh.top_radius = 0.33
+	shadow_mesh.bottom_radius = 0.33
 	shadow_mesh.height = 0.02
 	shadow.mesh = shadow_mesh
 	shadow.position = Vector3(0.0, 0.01, 0.0)

@@ -7,6 +7,7 @@ const Enemy3DScript := preload("res://scripts/enemy_3d.gd")
 
 const GRID_SIZE := Vector2i(16, 9)
 const CELL_SIZE := 1.0
+const REROUTE_FLASH_DURATION := 0.75
 
 var grid := WallbornGridScript.new(GRID_SIZE, 48)
 var grid_view = WallbornGridView3DScript.centered(GRID_SIZE, CELL_SIZE)
@@ -73,10 +74,10 @@ func _create_light() -> void:
 	environment.name = "WorldEnvironment"
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color("#0b1020")
+	env.background_color = Color("#b9e6ff")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("#94a3b8")
-	env.ambient_light_energy = 0.35
+	env.ambient_light_color = Color("#f8fafc")
+	env.ambient_light_energy = 0.62
 	environment.environment = env
 	add_child(environment)
 
@@ -121,28 +122,71 @@ func _rebuild_board() -> void:
 	for cell in grid_view.get_cells_in_draw_order(grid.size):
 		board_root.add_child(_create_cell_mesh(cell))
 
-func _create_cell_mesh(cell: Vector2i) -> MeshInstance3D:
-	var mesh_instance := MeshInstance3D.new()
-	mesh_instance.name = "Cell_%s_%s" % [cell.x, cell.y]
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(CELL_SIZE * 0.96, 0.08, CELL_SIZE * 0.96)
-	mesh_instance.mesh = mesh
-	mesh_instance.position = grid_view.cell_to_world(cell) + Vector3(0.0, -0.04, 0.0)
-	mesh_instance.material_override = _material_for_cell(cell)
-	return mesh_instance
+func _create_cell_mesh(cell: Vector2i) -> Node3D:
+	var root := Node3D.new()
+	root.name = "DioramaCell_%s_%s" % [cell.x, cell.y]
+	root.position = grid_view.cell_to_world(cell)
 
-func _material_for_cell(cell: Vector2i) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("#182033")
+	var base := MeshInstance3D.new()
+	base.name = "TileBase"
+	var base_mesh := BoxMesh.new()
+	base_mesh.size = Vector3(CELL_SIZE * 0.94, 0.16, CELL_SIZE * 0.94)
+	base.mesh = base_mesh
+	base.position = Vector3(0.0, -0.08, 0.0)
+	base.material_override = _make_material(_cell_side_color(cell))
+	root.add_child(base)
+
+	var top := MeshInstance3D.new()
+	top.name = "TileTop"
+	var top_mesh := BoxMesh.new()
+	top_mesh.size = Vector3(CELL_SIZE * 0.82, 0.055, CELL_SIZE * 0.82)
+	top.mesh = top_mesh
+	top.position = Vector3(0.0, 0.025, 0.0)
+	top.material_override = _make_material(_cell_top_color(cell))
+	root.add_child(top)
+
+	if grid.get_cell_type(cell) == grid.CELL_START:
+		root.add_child(_create_tile_icon(Color("#bbf7d0"), 0.27))
+	elif grid.get_cell_type(cell) == grid.CELL_GOAL:
+		root.add_child(_create_tile_icon(Color("#fecaca"), 0.31))
+	return root
+
+func _create_tile_icon(color: Color, radius: float) -> MeshInstance3D:
+	var icon := MeshInstance3D.new()
+	icon.name = "TileIcon"
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = 0.025
+	icon.mesh = mesh
+	icon.position = Vector3(0.0, 0.072, 0.0)
+	icon.material_override = _make_material(color)
+	return icon
+
+func _cell_top_color(cell: Vector2i) -> Color:
 	match grid.get_cell_type(cell):
 		grid.CELL_START:
-			material.albedo_color = Color("#14532d")
+			return Color("#34d399")
 		grid.CELL_GOAL:
-			material.albedo_color = Color("#7f1d1d")
+			return Color("#fb7185")
 		grid.CELL_BLOCKED:
-			material.albedo_color = Color("#475569")
-	material.roughness = 0.85
-	return material
+			return Color("#94a3b8")
+	var alternate := (cell.x * 3 + cell.y * 5) % 4
+	if alternate == 0:
+		return Color("#9bd66f")
+	if alternate == 1:
+		return Color("#8fcb63")
+	return Color("#a7d97a")
+
+func _cell_side_color(cell: Vector2i) -> Color:
+	match grid.get_cell_type(cell):
+		grid.CELL_START:
+			return Color("#15803d")
+		grid.CELL_GOAL:
+			return Color("#be123c")
+		grid.CELL_BLOCKED:
+			return Color("#64748b")
+	return Color("#5f8f4e")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
@@ -244,30 +288,33 @@ func _add_defense_unit(cell: Vector2i) -> void:
 	unit.name = "WallTurret_%s_%s" % [cell.x, cell.y]
 	unit.position = grid_view.cell_to_world(cell)
 
-	var wall := MeshInstance3D.new()
-	var wall_mesh := BoxMesh.new()
-	wall_mesh.size = Vector3(0.78, 0.72, 0.78)
-	wall.mesh = wall_mesh
-	wall.position = Vector3(0.0, 0.36, 0.0)
-	wall.material_override = _make_material(Color("#64748b"))
-	unit.add_child(wall)
+	for offset in [-0.22, 0.0, 0.22]:
+		var block := MeshInstance3D.new()
+		block.name = "WallBlock"
+		var block_mesh := BoxMesh.new()
+		block_mesh.size = Vector3(0.23, 0.52 + absf(offset) * 0.24, 0.58)
+		block.mesh = block_mesh
+		block.position = Vector3(offset, 0.30 + absf(offset) * 0.12, 0.0)
+		block.material_override = _make_material(Color("#8ea3b7"))
+		unit.add_child(block)
 
 	var turret := MeshInstance3D.new()
 	var turret_mesh := CylinderMesh.new()
-	turret_mesh.top_radius = 0.22
-	turret_mesh.bottom_radius = 0.28
-	turret_mesh.height = 0.24
+	turret_mesh.radial_segments = 8
+	turret_mesh.top_radius = 0.24
+	turret_mesh.bottom_radius = 0.31
+	turret_mesh.height = 0.26
 	turret.mesh = turret_mesh
-	turret.position = Vector3(0.0, 0.86, 0.0)
-	turret.material_override = _make_material(Color("#cbd5e1"))
+	turret.position = Vector3(0.0, 0.78, 0.0)
+	turret.material_override = _make_material(Color("#e2e8f0"))
 	unit.add_child(turret)
 
 	var barrel := MeshInstance3D.new()
 	var barrel_mesh := BoxMesh.new()
-	barrel_mesh.size = Vector3(0.16, 0.12, 0.56)
+	barrel_mesh.size = Vector3(0.16, 0.12, 0.62)
 	barrel.mesh = barrel_mesh
-	barrel.position = Vector3(0.0, 0.9, -0.32)
-	barrel.material_override = _make_material(Color("#f97316"))
+	barrel.position = Vector3(0.0, 0.82, -0.36)
+	barrel.material_override = _make_material(Color("#f59e0b"))
 	unit.add_child(barrel)
 
 	defense_root.add_child(unit)
@@ -277,19 +324,19 @@ func _refresh_path_markers() -> void:
 	if path.is_empty():
 		return
 
-	var flash_ratio := clampf(path_reroute_flash / 0.75, 0.0, 1.0)
-	var path_color := Color("#facc15").lerp(Color("#fff7ad"), flash_ratio)
-	var segment_color := Color("#ca8a04").lerp(Color("#fde68a"), flash_ratio)
-	var pulse_color := Color("#f97316").lerp(Color("#fef3c7"), flash_ratio)
+	var flash_ratio := clampf(path_reroute_flash / REROUTE_FLASH_DURATION, 0.0, 1.0)
+	var path_color := Color("#c08457").lerp(Color("#fde68a"), flash_ratio)
+	var segment_color := Color("#9a6a3a").lerp(Color("#fbbf24"), flash_ratio)
+	var pulse_color := Color("#f59e0b").lerp(Color("#fef3c7"), flash_ratio)
 
 	for i in range(path.size()):
 		var cell := path[i]
 		var marker := MeshInstance3D.new()
 		marker.name = "PathTile_%s_%s" % [cell.x, cell.y]
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.54, 0.035, 0.54)
+		mesh.size = Vector3(0.62, 0.032, 0.62)
 		marker.mesh = mesh
-		marker.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.045 + flash_ratio * 0.025, 0.0)
+		marker.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.082 + flash_ratio * 0.025, 0.0)
 		marker.material_override = _make_material(path_color)
 		marker_root.add_child(marker)
 
@@ -306,8 +353,8 @@ func _refresh_path_markers() -> void:
 			marker_root.add_child(pulse)
 
 	for i in range(path.size() - 1):
-		var from_pos: Vector3 = grid_view.cell_to_world(path[i]) + Vector3(0.0, 0.06, 0.0)
-		var to_pos: Vector3 = grid_view.cell_to_world(path[i + 1]) + Vector3(0.0, 0.06, 0.0)
+		var from_pos: Vector3 = grid_view.cell_to_world(path[i]) + Vector3(0.0, 0.095, 0.0)
+		var to_pos: Vector3 = grid_view.cell_to_world(path[i + 1]) + Vector3(0.0, 0.095, 0.0)
 		var segment := _create_path_segment(from_pos, to_pos, segment_color)
 		marker_root.add_child(segment)
 
@@ -317,7 +364,7 @@ func _create_path_segment(from_pos: Vector3, to_pos: Vector3, color: Color) -> M
 	var segment := MeshInstance3D.new()
 	segment.name = "PathSegment"
 	var mesh := BoxMesh.new()
-	mesh.size = Vector3(0.22, 0.03, maxf(length, 0.01))
+	mesh.size = Vector3(0.24, 0.03, maxf(length, 0.01))
 	segment.mesh = mesh
 	segment.position = (from_pos + to_pos) * 0.5
 	segment.rotation.y = atan2(delta.x, delta.z)
