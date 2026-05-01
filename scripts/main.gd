@@ -3,6 +3,12 @@
 const WallbornGridScript := preload("res://scripts/wallborn_grid.gd")
 const WallbornGridViewScript := preload("res://scripts/wallborn_grid_view.gd")
 const EnemyScript := preload("res://scripts/enemy.gd")
+const KENNEY_FLOOR_TEXTURE := preload("res://assets/external/kenney_tiny_dungeon/raw/Tiles/tile_0048.png")
+const KENNEY_FLOOR_DETAIL_TEXTURE := preload("res://assets/external/kenney_tiny_dungeon/raw/Tiles/tile_0049.png")
+const KENNEY_WALL_TEXTURE := preload("res://assets/external/kenney_tiny_dungeon/raw/Tiles/tile_0014.png")
+const KENNEY_SPAWN_TEXTURE := preload("res://assets/external/kenney_tiny_dungeon/raw/Tiles/tile_0029.png")
+const KENNEY_GOAL_TEXTURE := preload("res://assets/external/kenney_tiny_dungeon/raw/Tiles/tile_0032.png")
+const KENNEY_TURRET_TEXTURE := preload("res://assets/external/kenney_tiny_dungeon/raw/Tiles/tile_0118.png")
 const GRID_SIZE := Vector2i(16, 9)
 const CELL_SIZE := 56
 const GRID_ORIGIN := Vector2(192, 128)
@@ -409,6 +415,7 @@ func _draw_cells() -> void:
 		draw_colored_polygon(PackedVector2Array([corners[1], corners[2], corners[2] + side_depth, corners[1] + side_depth]), side_color)
 		draw_colored_polygon(PackedVector2Array([corners[2], corners[3], corners[3] + side_depth, corners[2] + side_depth]), side_color.darkened(0.18))
 		draw_colored_polygon(corners, fill)
+		_draw_cell_texture(cell)
 		draw_polyline(PackedVector2Array([corners[0], corners[1], corners[2], corners[3], corners[0]]), Color("#334155"), 1.0)
 		if grid.get_cell_type(cell) == grid.CELL_START:
 			_draw_spawn_gate(cell)
@@ -416,6 +423,31 @@ func _draw_cells() -> void:
 			_draw_core(cell)
 		elif grid.get_cell_type(cell) == grid.CELL_BLOCKED:
 			_draw_defense_unit(cell)
+
+func _draw_cell_texture(cell: Vector2i) -> void:
+	var center: Vector2 = grid_view.cell_to_world(cell)
+	var texture: Texture2D = KENNEY_FLOOR_TEXTURE
+	var tint := Color(1, 1, 1, 0.34)
+	match grid.get_cell_type(cell):
+		grid.CELL_START:
+			texture = KENNEY_SPAWN_TEXTURE
+			tint = Color(1, 1, 1, 0.88)
+		grid.CELL_GOAL:
+			texture = KENNEY_GOAL_TEXTURE
+			tint = Color(1, 1, 1, 0.9)
+		grid.CELL_BLOCKED:
+			texture = KENNEY_WALL_TEXTURE
+			tint = Color(1, 1, 1, 0.76)
+		_:
+			if (cell.x + cell.y) % 5 == 0:
+				texture = KENNEY_FLOOR_DETAIL_TEXTURE
+				tint = Color(1, 1, 1, 0.42)
+	if texture == null:
+		return
+	var size := Vector2(40, 40)
+	if grid.get_cell_type(cell) == grid.CELL_BLOCKED:
+		size = Vector2(44, 44)
+	draw_texture_rect(texture, Rect2(center - size * 0.5 + Vector2(0, -5), size), false, tint)
 
 func _draw_spawn_gate(cell: Vector2i) -> void:
 	var center: Vector2 = grid_view.cell_to_world(cell)
@@ -471,6 +503,7 @@ func _draw_defense_unit(cell: Vector2i) -> void:
 	var muzzle := turret_center + aim_direction * 25.0
 	draw_circle(turret_center + Vector2(0, 4), 13.0, Color(0, 0, 0, 0.22))
 	draw_circle(turret_center, 12.0, Color("#cbd5e1"))
+	draw_texture_rect(KENNEY_TURRET_TEXTURE, Rect2(turret_center - Vector2(13, 13), Vector2(26, 26)), false, Color(1, 1, 1, 0.82))
 	draw_line(turret_center, muzzle, Color("#e2e8f0"), 7.0)
 	draw_line(turret_center, muzzle, Color("#f97316"), 3.0)
 	draw_circle(turret_center, 5.0, Color("#0f172a"))

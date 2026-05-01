@@ -1,6 +1,10 @@
 extends Node2D
 class_name Enemy
 
+const KENNEY_CRAWLER_TEXTURE := preload("res://assets/external/kenney_tiny_dungeon/raw/Tiles/tile_0120.png")
+const KENNEY_RUNNER_TEXTURE := preload("res://assets/external/kenney_tiny_dungeon/raw/Tiles/tile_0121.png")
+const KENNEY_BRUTE_TEXTURE := preload("res://assets/external/kenney_tiny_dungeon/raw/Tiles/tile_0110.png")
+
 signal reached_goal(enemy: Enemy)
 signal died(enemy: Enemy)
 
@@ -140,6 +144,8 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2(-radius, -radius - 8.0), Vector2(radius * 2.0 * health_ratio, 3.0)), Color("#22c55e"), true)
 
 func _draw_monster_body(offset: Vector2, side: float) -> void:
+	if _draw_kenney_monster_sprite(offset):
+		return
 	match variant:
 		"runner":
 			_draw_runner(offset, side)
@@ -147,6 +153,23 @@ func _draw_monster_body(offset: Vector2, side: float) -> void:
 			_draw_brute(offset, side)
 		_:
 			_draw_crawler(offset, side)
+
+func _draw_kenney_monster_sprite(offset: Vector2) -> bool:
+	var texture: Texture2D = KENNEY_CRAWLER_TEXTURE
+	var size := Vector2(44, 44)
+	match variant:
+		"runner":
+			texture = KENNEY_RUNNER_TEXTURE
+			size = Vector2(42, 42)
+		"brute":
+			texture = KENNEY_BRUTE_TEXTURE
+			size = Vector2(52, 52)
+		_:
+			texture = KENNEY_CRAWLER_TEXTURE
+	if texture == null:
+		return false
+	draw_texture_rect(texture, Rect2(offset - size * 0.5 + Vector2(0, -6), size), false)
+	return true
 
 func _draw_crawler(offset: Vector2, side: float) -> void:
 	var body_rect := Rect2(offset + Vector2(-radius, -radius * 0.65), Vector2(radius * 2.0, radius * 1.45))
