@@ -39,6 +39,10 @@ try {
   $godotVersion = (& $Godot --version).Trim()
   Write-Step "Godot version: $godotVersion"
 
+  Write-Step "Importing Godot assets"
+  & $Godot --headless --editor --path $ProjectRoot --quit 2>&1 | Tee-Object -FilePath $QaLog -Append
+  if ($LASTEXITCODE -ne 0) { throw "Godot asset import failed" }
+
   Write-Step "Running automated tests"
   & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "test.ps1") -Godot $Godot
   if ($LASTEXITCODE -ne 0) { throw "Automated tests failed" }
