@@ -8,6 +8,7 @@ const REPO = 'xian0310567/wallborn';
 const RELEASE_TAG = 'latest-test-build';
 const MAC_ASSET = 'Wallborn.zip';
 const WINDOWS_ASSET = 'Wallborn.exe';
+const MANIFEST_URL = `https://github.com/${REPO}/releases/download/${RELEASE_TAG}/latest.json`;
 
 let mainWindow;
 
@@ -50,32 +51,80 @@ function githubHeaders(accept = 'application/vnd.github+json') {
   };
 }
 
-async function fetchLatestRelease() {
-  const response = await fetch(`https://api.github.com/repos/${REPO}/releases/tags/${RELEASE_TAG}`, {
-    headers: githubHeaders(),
+function platformKey() {
+  return process.platform === 'darwin' ? 'macos' : 'windows';
+}
+
+async function fetchReleaseManifest() {
+  const response = await fetch(`${MANIFEST_URL}?t=${Date.now()}`, {
+    headers: {
+      'Accept': 'application/json',
+      'User-Agent': 'Wallborn-Test-Launcher',
+      'Cache-Control': 'no-cache',
+    },
   });
   if (!response.ok) {
-    throw new Error(`GitHub release request failed: ${response.status} ${response.statusText}`);
+    throw new Error(`Release manifest request failed: ${response.status} ${response.statusText}`);
   }
-  const release = await response.json();
-  const wantedAsset = process.platform === 'darwin' ? MAC_ASSET : WINDOWS_ASSET;
-  const asset = release.assets.find((item) => item.name === wantedAsset);
-  if (!asset) throw new Error(`Release asset not found: ${wantedAsset}`);
+  const manifest = await response.json();
+  const asset = manifest.assets?.[platformKey()];
+  if (!asset) throw new Error(`Release manifest asset not found for platform: ${platformKey()}`);
   return {
-    tag: release.tag_name,
-    name: release.name,
-    htmlUrl: release.html_url,
-    body: release.body || '',
-    assetName: asset.name,
-    assetId: asset.id,
-    assetUpdatedAt: asset.updated_at,
-    assetSize: asset.size,
-    browserDownloadUrl: asset.browser_download_url,
+    tag: manifest.tag || RELEASE_TAG,
+    name: manifest.name || 'Latest Wallborn Test Build',
+    htmlUrl: manifest.htmlUrl || `https://github.com/${REPO}/releases/tag/${RELEASE_TAG}`,
+    body: manifest.body || '',
+    commit: manifest.commit || '',
+    branch: manifest.branch || '',
+    runUrl: manifest.runUrl || '',
+    builtAt: manifest.builtAt || asset.assetUpdatedAt || '',
+    assetName: asset.assetName,
+    assetId: asset.assetId || '',
+    assetUpdatedAt: asset.assetUpdatedAt || manifest.builtAt || '',
+    assetSize: asset.assetSize || 0,
+    browserDownloadUrl: asset.browserDownloadUrl,
   };
 }
 
+async function fetchLatestRelease() {
+  try {
+    return await fetchReleaseManifest();
+  } catch (manifestError) {
+    const response = await fetch(`https://api.github.com/repos/${REPO}/releases/tags/${RELEASE_TAG}`, {
+      headers: githubHeaders(),
+    });
+    if (!response.ok) {
+      if (response.status === 403 || response.status === 429) {
+        throw new Error('GitHub 확인 한도에 걸렸습니다. 잠시 후 다시 시도하거나 새 런처 빌드를 설치하세요.');
+      }
+      throw new Error(`GitHub release request failed: ${response.status} ${response.statusText}`);
+    }
+    const release = await response.json();
+    const wantedAsset = process.platform === 'darwin' ? MAC_ASSET : WINDOWS_ASSET;
+    const asset = release.assets.find((item) => item.name === wantedAsset);
+    if (!asset) throw new Error(`Release asset not found: ${wantedAsset}`);
+    return {
+      tag: release.tag_name,
+      name: release.name,
+      htmlUrl: release.html_url,
+      body: release.body || '',
+      assetName: asset.name,
+      assetId: asset.id,
+      assetUpdatedAt: asset.updated_at,
+      assetSize: asset.size,
+      browserDownloadUrl: asset.browser_download_url,
+      manifestError: manifestError.message,
+    };
+  }
+}
+
 async function downloadAsset(url, outputPath) {
-  const response = await fetch(url, { headers: githubHeaders('application/octet-stream') });
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/octet-stream',
+      'User-Agent': 'Wallborn-Test-Launcher',
+    },
+  });
   if (!response.ok) {
     throw new Error(`Download failed: ${response.status} ${response.statusText}`);
   }

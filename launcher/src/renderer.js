@@ -6,10 +6,14 @@ const updateStateEl = document.querySelector('#update-state');
 const lastCheckEl = document.querySelector('#last-check');
 const updateButton = document.querySelector('#update');
 
-const CHECK_INTERVAL_MS = 60 * 1000;
+const CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const MIN_CHECK_GAP_MS = 30 * 1000;
+const RATE_LIMIT_BACKOFF_MS = 15 * 60 * 1000;
 let latestRelease = null;
 let installedAssetUpdatedAt = '';
 let checking = false;
+let lastCheckStartedAt = 0;
+let backoffUntil = 0;
 
 function formatKst(value) {
   if (!value) return '설치된 빌드 없음';
@@ -86,17 +90,31 @@ function updateAvailabilityUi() {
 
 async function checkForUpdates({ manual = false } = {}) {
   if (checking) return latestRelease;
+  const now = Date.now();
+  if (!manual && backoffUntil > now) return latestRelease;
+  if (!manual && latestRelease && now - lastCheckStartedAt < MIN_CHECK_GAP_MS) return latestRelease;
+  if (manual && latestRelease && now - lastCheckStartedAt < 5000) {
+    updateAvailabilityUi();
+    renderRelease(latestRelease);
+    log('최근 확인 결과 사용');
+    return latestRelease;
+  }
   checking = true;
+  lastCheckStartedAt = now;
   try {
     if (manual) log('최신 빌드 확인...');
     await refreshConfig();
     latestRelease = await window.wallborn.checkRelease();
+    backoffUntil = 0;
     lastCheckEl.textContent = formatKst(new Date().toISOString());
     updateAvailabilityUi();
     renderRelease(latestRelease);
     if (manual) log('최신 빌드 확인 완료');
     return latestRelease;
   } catch (error) {
+    if (String(error.message).includes('한도') || String(error.message).includes('rate limit') || String(error.message).includes('403')) {
+      backoffUntil = Date.now() + RATE_LIMIT_BACKOFF_MS;
+    }
     setUpdateState('error', `확인 실패: ${error.message}`);
     if (manual) log(`최신 빌드 확인 실패: ${error.message}`);
     throw error;

@@ -59,6 +59,35 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $tag = "latest-test-build"
+          $builtAt = (Get-Date).ToUniversalTime().ToString("o")
+          $releaseUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/releases/tag/$tag"
+          $macDownloadUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/releases/download/$tag/Wallborn.zip"
+          $windowsDownloadUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/releases/download/$tag/Wallborn.exe"
+          $manifest = [ordered]@{
+            tag = $tag
+            name = "Latest Wallborn Test Build"
+            htmlUrl = $releaseUrl
+            body = "Automated Wallborn test build.`n`nCommit: $env:GITHUB_SHA`nBranch: $env:GITHUB_REF_NAME`nRun: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            commit = $env:GITHUB_SHA
+            branch = $env:GITHUB_REF_NAME
+            runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            builtAt = $builtAt
+            assets = @{
+              macos = @{
+                assetName = "Wallborn.zip"
+                assetUpdatedAt = $builtAt
+                assetSize = (Get-Item "builds/macos/Wallborn.zip").Length
+                browserDownloadUrl = $macDownloadUrl
+              }
+              windows = @{
+                assetName = "Wallborn.exe"
+                assetUpdatedAt = $builtAt
+                assetSize = (Get-Item "builds/windows/Wallborn.exe").Length
+                browserDownloadUrl = $windowsDownloadUrl
+              }
+            }
+          }
+          $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path latest.json -Encoding utf8
           $notes = @"
           Automated Wallborn test build.
 
@@ -71,6 +100,7 @@ jobs:
           gh release create $tag `
             builds/windows/Wallborn.exe `
             builds/macos/Wallborn.zip `
+            latest.json `
             logs/test-last.log `
             logs/build-last.log `
             --title "Latest Wallborn Test Build" `
