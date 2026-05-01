@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$Godot = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\GodotEngine.GodotEngine_Microsoft.Winget.Source_8wekyb3d8bbwe\Godot_v4.6.2-stable_win64_console.exe"
 )
 
@@ -20,6 +20,12 @@ try {
   & $Godot --headless --path $ProjectRoot --script res://tests/test_grid.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
   if ($LASTEXITCODE -ne 0) {
     Write-Error "Godot grid test failed. See $LogPath"
+  }
+
+  "== Grid view unit test ==" | Tee-Object -FilePath $LogPath -Append
+  & $Godot --headless --path $ProjectRoot --script res://tests/test_grid_view.gd 2>&1 | Tee-Object -FilePath $LogPath -Append
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Godot grid view test failed. See $LogPath"
   }
 
   "== Enemy unit test ==" | Tee-Object -FilePath $LogPath -Append
