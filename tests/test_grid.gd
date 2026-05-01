@@ -42,6 +42,16 @@ func _initialize() -> void:
 	_assert_true(grid.find_path().is_empty(), "solid wall should block all paths")
 	_assert_true(not grid.has_valid_path(), "solid wall should report no valid path")
 
+	grid.clear_blocked()
+	for y in range(grid.size.y):
+		if y != grid.start_cell.y:
+			_assert_true(grid.try_set_blocked_preserving_path(Vector2i(1, y)), "path-preserving placement should allow wall with gap")
+	var before_rejected_path := grid.find_path()
+	_assert_true(not before_rejected_path.is_empty(), "path should exist before rejected full block")
+	_assert_true(not grid.try_set_blocked_preserving_path(Vector2i(1, grid.start_cell.y)), "path-preserving placement should reject full block")
+	_assert_true(not grid.blocked_cells.has(Vector2i(1, grid.start_cell.y)), "rejected full block cell should not remain blocked")
+	_assert_equal(grid.find_path(), before_rejected_path, "rejected full block should preserve previous path")
+
 	print("Grid tests passed")
 	quit(0)
 

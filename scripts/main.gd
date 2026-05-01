@@ -24,7 +24,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func try_place_defense_at(world_pos: Vector2) -> bool:
 	var cell := grid.world_to_cell(world_pos, GRID_ORIGIN)
-	if not grid.set_blocked(cell):
+	if not grid.try_set_blocked_preserving_path(cell):
 		print("Defense placement rejected: %s" % cell)
 		return false
 	path = grid.find_path()

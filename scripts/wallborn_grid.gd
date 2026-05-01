@@ -61,6 +61,19 @@ func set_blocked(cell: Vector2i, blocked: bool = true) -> bool:
 		blocked_cells.erase(cell)
 	return true
 
+func would_preserve_path_if_blocked(cell: Vector2i) -> bool:
+	if not is_buildable(cell):
+		return false
+	blocked_cells[cell] = true
+	var preserves_path := has_valid_path()
+	blocked_cells.erase(cell)
+	return preserves_path
+
+func try_set_blocked_preserving_path(cell: Vector2i) -> bool:
+	if not would_preserve_path_if_blocked(cell):
+		return false
+	return set_blocked(cell, true)
+
 func clear_blocked() -> void:
 	blocked_cells.clear()
 
