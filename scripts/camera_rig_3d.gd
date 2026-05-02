@@ -14,7 +14,6 @@ class_name CameraRig3D
 
 var yaw_degrees := 45.0
 var camera: Camera3D
-var dragging := false
 var home_position := Vector3.ZERO
 var home_yaw_degrees := 45.0
 var has_focus_bounds := false
@@ -66,10 +65,10 @@ func _process(delta: float) -> void:
 
 	if input != Vector2.ZERO:
 		input = input.normalized()
-		var yaw := deg_to_rad(yaw_degrees)
-		var forward := Vector3(sin(yaw), 0.0, cos(yaw))
-		var right := Vector3(cos(yaw), 0.0, -sin(yaw))
-		global_position += (right * input.x + forward * input.y) * move_speed * delta
+		var yaw := deg_to_rad(home_yaw_degrees)
+		var screen_up := Vector3(-sin(yaw), 0.0, -cos(yaw))
+		var screen_right := Vector3(cos(yaw), 0.0, -sin(yaw))
+		global_position += (screen_right * input.x - screen_up * input.y) * move_speed * delta
 		clamp_to_focus_bounds()
 		_apply_camera_transform()
 
@@ -79,23 +78,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			camera.size = maxf(min_ortho_size, camera.size - zoom_step)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
 			camera.size = minf(max_ortho_size, camera.size + zoom_step)
-		elif event.button_index == MOUSE_BUTTON_MIDDLE or event.button_index == MOUSE_BUTTON_RIGHT:
-			dragging = event.pressed
-	elif event is InputEventMouseMotion and dragging:
-		var yaw := deg_to_rad(yaw_degrees)
-		var right := Vector3(cos(yaw), 0.0, -sin(yaw))
-		var forward := Vector3(sin(yaw), 0.0, cos(yaw))
-		global_position += (-right * event.relative.x + forward * event.relative.y) * drag_speed * camera.size
-		clamp_to_focus_bounds()
-		_apply_camera_transform()
 	elif event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_Q:
-			yaw_degrees -= yaw_step_degrees
-			_apply_camera_transform()
-		elif event.keycode == KEY_E:
-			yaw_degrees += yaw_step_degrees
-			_apply_camera_transform()
-		elif event.keycode == KEY_SPACE or event.keycode == KEY_HOME:
+		if event.keycode == KEY_SPACE or event.keycode == KEY_HOME:
 			reset_home()
 
 func _apply_camera_transform() -> void:

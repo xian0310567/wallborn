@@ -24,6 +24,12 @@ func _initialize() -> void:
 	_assert_equal(rig.min_ortho_size, 8.0, "camera min zoom should stay constrained for defense readability")
 	_assert_equal(rig.max_ortho_size, 24.0, "camera max zoom should support large-map navigation")
 
+	var q_event := InputEventKey.new()
+	q_event.keycode = KEY_Q
+	q_event.pressed = true
+	rig._unhandled_input(q_event)
+	_assert_equal(rig.yaw_degrees, 45.0, "Q should not rotate the stable Unrailed-style camera")
+
 	rig.queue_free()
 	print("Camera rig 3D tests passed")
 	quit(0)
