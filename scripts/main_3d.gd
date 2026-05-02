@@ -432,7 +432,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _apply_default_window_mode() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
 
 func _toggle_fullscreen() -> void:
 	if DisplayServer.get_name() == "headless":
@@ -441,7 +441,7 @@ func _toggle_fullscreen() -> void:
 	if current_mode == DisplayServer.WINDOW_MODE_FULLSCREEN or current_mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	else:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
 
 func try_place_defense_at_world(world_pos: Vector3) -> bool:
 	var cell: Vector2i = grid_view.world_to_cell(world_pos)
@@ -841,6 +841,7 @@ func _make_material(color: Color) -> StandardMaterial3D:
 func _clear_children(node: Node) -> void:
 	for child in node.get_children():
 		child.queue_free()
+
 
 
 
