@@ -21,8 +21,8 @@ func _initialize() -> void:
 	_assert_equal(rig.global_position, Vector3.ZERO, "camera home should return to board center")
 	_assert_equal(rig.yaw_degrees, 45.0, "camera home should restore diorama yaw")
 	_assert_float_close(rig.camera.size, rig.default_ortho_size, 0.001, "camera home should restore default zoom")
-	_assert_equal(rig.min_ortho_size, 6.6, "camera min zoom should stay constrained for defense readability")
-	_assert_equal(rig.max_ortho_size, 13.2, "camera max zoom should stay constrained for defense readability")
+	_assert_equal(rig.min_ortho_size, 8.0, "camera min zoom should stay constrained for defense readability")
+	_assert_equal(rig.max_ortho_size, 24.0, "camera max zoom should support large-map navigation")
 
 	rig.queue_free()
 	print("Camera rig 3D tests passed")

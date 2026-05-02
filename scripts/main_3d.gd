@@ -5,7 +5,7 @@ const WallbornGridView3DScript := preload("res://scripts/wallborn_grid_view_3d.g
 const CameraRig3DScript := preload("res://scripts/camera_rig_3d.gd")
 const Enemy3DScript := preload("res://scripts/enemy_3d.gd")
 
-const GRID_SIZE := Vector2i(16, 9)
+const GRID_SIZE := Vector2i(48, 28)
 const CELL_SIZE := 1.0
 const REROUTE_FLASH_DURATION := 0.75
 
@@ -86,7 +86,7 @@ func _create_camera() -> void:
 	camera_rig.name = "CameraRig3D"
 	add_child(camera_rig)
 	camera_rig.focus_on(grid_view.board_center(grid.size))
-	camera_rig.configure_focus_bounds(grid_view.board_center(grid.size), grid_view.board_size(grid.size), 2.0)
+	camera_rig.configure_focus_bounds(grid_view.board_center(grid.size), grid_view.board_size(grid.size), 4.0)
 
 func _create_hud() -> void:
 	var canvas := CanvasLayer.new()
@@ -106,7 +106,7 @@ func _create_hud() -> void:
 	panel.add_child(margin)
 
 	status_label = Label.new()
-	status_label.text = "Wallborn 3D Diorama Camera\nWASD/Arrow: move | Wheel: zoom | Q/E: rotate | Space/Home: reset | Left click: place wall"
+	status_label.text = "Wallborn 3D Large Map\nWASD/Arrow: move | Wheel: zoom | Q/E: rotate | Space/Home: reset | Left click: place wall"
 	status_label.add_theme_font_size_override("font_size", 16)
 	margin.add_child(status_label)
 
@@ -388,12 +388,35 @@ func _update_status() -> void:
 			wave_resolved_count,
 			wave_enemies_to_spawn,
 		]
-	status_label.text = "Wallborn 3D Diorama Camera | %s\nWalls: %s | Enemies: %s | Path cells: %s\nWASD/Arrow: move | Wheel: zoom | Q/E: rotate | Space/Home: reset | Left click: place wall" % [
+	var camera_center := Vector3.ZERO
+	if camera_rig != null:
+		camera_center = camera_rig.global_position
+	var goal_direction := _direction_label(grid_view.cell_to_world(grid.goal_cell) - camera_center)
+	var enemy_direction := "-"
+	if not enemies.is_empty() and is_instance_valid(enemies[0]):
+		enemy_direction = _direction_label(enemies[0].global_position - camera_center)
+	status_label.text = "Wallborn 3D Large Map | %s\nMap: %sx%s | Walls: %s | Enemies: %s | Path: %s | Core: %s | Enemy: %s\nWASD/Arrow: move | Wheel: zoom | Q/E: rotate | Space/Home: reset | Left click: place wall" % [
 		wave_text,
+		grid.size.x,
+		grid.size.y,
 		defense_units.size(),
 		enemies.size(),
 		path.size(),
+		goal_direction,
+		enemy_direction,
 	]
+
+func _direction_label(delta: Vector3) -> String:
+	var planar := Vector2(delta.x, delta.z)
+	if planar.length() < 0.75:
+		return "HERE"
+	var horizontal := "E" if planar.x > 0.0 else "W"
+	var vertical := "S" if planar.y > 0.0 else "N"
+	if absf(planar.x) > absf(planar.y) * 1.8:
+		return horizontal
+	if absf(planar.y) > absf(planar.x) * 1.8:
+		return vertical
+	return vertical + horizontal
 
 func _make_material(color: Color) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()

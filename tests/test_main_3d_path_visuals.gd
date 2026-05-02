@@ -8,9 +8,11 @@ func _initialize() -> void:
 	await process_frame
 
 	_assert_true(main.path.size() > 1, "3D main should initialize a valid path")
+	_assert_true(main.grid.size == Vector2i(48, 28), "3D main should use the large-map grid size")
+	_assert_true(main.path.size() > 32, "large-map path should be meaningfully longer than the old small board")
 	_assert_true(main.marker_root.get_child_count() >= main.path.size(), "3D path visuals should include path tiles and segments")
 
-	var place_cell := Vector2i(5, 4)
+	var place_cell := Vector2i(5, 14)
 	var place_world: Vector3 = main.grid_view.cell_to_world(place_cell)
 	_assert_true(main.try_place_defense_at_world(place_world), "3D placement should succeed on a path-preserving cell")
 	_assert_true(main.path_reroute_flash > 0.0, "3D path visuals should flash after rerouting")
