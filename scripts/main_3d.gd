@@ -146,7 +146,7 @@ func _create_hud() -> void:
 	panel.add_child(margin)
 
 	status_label = Label.new()
-	status_label.text = "Wallborn 3D Large Map\nWASD/Arrow: move | Wheel: zoom | Space/Home: reset | Left click: place wall"
+	status_label.text = "Wallborn 3D Large Map\nWASD/Arrow: move | Wheel: zoom | Space/Home: reset | F11: fullscreen | Left click: place wall"
 	status_label.add_theme_font_size_override("font_size", 16)
 	margin.add_child(status_label)
 
@@ -428,6 +428,20 @@ func _unhandled_input(event: InputEvent) -> void:
 		if ground_point == null:
 			return
 		try_place_defense_at_world(ground_point)
+
+func _apply_default_window_mode() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+func _toggle_fullscreen() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var current_mode := DisplayServer.window_get_mode()
+	if current_mode == DisplayServer.WINDOW_MODE_FULLSCREEN or current_mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
 func try_place_defense_at_world(world_pos: Vector3) -> bool:
 	var cell: Vector2i = grid_view.world_to_cell(world_pos)
@@ -729,7 +743,7 @@ func _update_status() -> void:
 	var enemy_direction := "-"
 	if not enemies.is_empty() and is_instance_valid(enemies[0]):
 		enemy_direction = _direction_label(enemies[0].global_position - camera_center)
-	status_label.text = "Wallborn 3D Large Map | %s\nMap: %sx%s | Walls: %s | Enemies: %s | Path: %s | Core: %s | Enemy: %s\nWASD/Arrow: move | Wheel: zoom | Space/Home: reset | Left click: place wall" % [
+	status_label.text = "Wallborn 3D Large Map | %s\nMap: %sx%s | Walls: %s | Enemies: %s | Path: %s | Core: %s | Enemy: %s\nWASD/Arrow: move | Wheel: zoom | Space/Home: reset | F11: fullscreen | Left click: place wall" % [
 		wave_text,
 		grid.size.x,
 		grid.size.y,
