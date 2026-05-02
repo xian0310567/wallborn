@@ -276,13 +276,9 @@ func _load_nature_texture(asset_name: String) -> Texture2D:
 	if asset_texture_cache.has(texture_name):
 		return asset_texture_cache[texture_name]
 	var path := NATURE_ASSET_ROOT + texture_name
-	var image := Image.new()
-	var error := image.load(path)
-	if error != OK:
+	var texture := ResourceLoader.load(path) as Texture2D
+	if texture == null:
 		push_warning("Nature texture failed to load: %s" % path)
-		asset_texture_cache[texture_name] = null
-		return null
-	var texture := ImageTexture.create_from_image(image)
 	asset_texture_cache[texture_name] = texture
 	return texture
 
