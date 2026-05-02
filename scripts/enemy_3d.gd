@@ -7,6 +7,7 @@ var path_points: Array[Vector3] = []
 var speed := 2.35
 var target_index := 1
 var reached := false
+var visual_root: Node3D
 
 func _ready() -> void:
 	if get_child_count() == 0:
@@ -20,6 +21,7 @@ func setup(points: Array[Vector3], p_speed: float = speed) -> bool:
 	target_index = 1
 	reached = false
 	global_position = path_points[0]
+	_face_direction(path_points[1] - path_points[0])
 	return true
 
 func advance(delta: float) -> bool:
@@ -40,6 +42,7 @@ func advance(delta: float) -> bool:
 				reached_goal.emit(self)
 				return true
 		else:
+			_face_direction(to_target)
 			global_position += to_target.normalized() * remaining_distance
 			remaining_distance = 0.0
 	return false
@@ -54,49 +57,104 @@ func update_path_preserving_position(points: Array[Vector3]) -> bool:
 	return true
 
 func _create_default_visuals() -> void:
-	var body := MeshInstance3D.new()
-	body.name = "Body"
-	var body_mesh := SphereMesh.new()
-	body_mesh.radial_segments = 8
-	body_mesh.rings = 4
-	body_mesh.radius = 0.28
-	body_mesh.height = 0.52
-	body.mesh = body_mesh
-	body.position = Vector3(0.0, 0.38, 0.0)
-	body.scale = Vector3(1.0, 0.86, 1.12)
-	body.material_override = _make_material(Color("#f97316"))
-	add_child(body)
-
-	for x in [-0.08, 0.08]:
-		var eye := MeshInstance3D.new()
-		eye.name = "Eye"
-		var eye_mesh := BoxMesh.new()
-		eye_mesh.size = Vector3(0.055, 0.055, 0.035)
-		eye.mesh = eye_mesh
-		eye.position = Vector3(x, 0.43, -0.25)
-		eye.material_override = _make_material(Color("#fff7ed"))
-		add_child(eye)
-
-	var crest := MeshInstance3D.new()
-	crest.name = "Crest"
-	var crest_mesh := BoxMesh.new()
-	crest_mesh.size = Vector3(0.16, 0.12, 0.18)
-	crest.mesh = crest_mesh
-	crest.position = Vector3(0.0, 0.62, 0.02)
-	crest.rotation_degrees.x = 18.0
-	crest.material_override = _make_material(Color("#fed7aa"))
-	add_child(crest)
+	visual_root = Node3D.new()
+	visual_root.name = "LowPolyMonsterVisual"
+	add_child(visual_root)
 
 	var shadow := MeshInstance3D.new()
 	shadow.name = "Shadow"
 	var shadow_mesh := CylinderMesh.new()
-	shadow_mesh.top_radius = 0.33
-	shadow_mesh.bottom_radius = 0.33
-	shadow_mesh.height = 0.02
+	shadow_mesh.radial_segments = 16
+	shadow_mesh.top_radius = 0.34
+	shadow_mesh.bottom_radius = 0.34
+	shadow_mesh.height = 0.018
 	shadow.mesh = shadow_mesh
-	shadow.position = Vector3(0.0, 0.01, 0.0)
+	shadow.position = Vector3(0.0, 0.012, 0.0)
 	shadow.material_override = _make_material(Color(0, 0, 0, 0.35))
-	add_child(shadow)
+	visual_root.add_child(shadow)
+
+	var body := MeshInstance3D.new()
+	body.name = "MonsterBody"
+	var body_mesh := CylinderMesh.new()
+	body_mesh.radial_segments = 7
+	body_mesh.top_radius = 0.25
+	body_mesh.bottom_radius = 0.31
+	body_mesh.height = 0.44
+	body.mesh = body_mesh
+	body.position = Vector3(0.0, 0.34, 0.0)
+	body.rotation_degrees.y = 12.0
+	body.scale = Vector3(1.05, 1.0, 0.92)
+	body.material_override = _make_material(Color("#b4475d"))
+	visual_root.add_child(body)
+
+	var head := MeshInstance3D.new()
+	head.name = "MonsterHead"
+	var head_mesh := BoxMesh.new()
+	head_mesh.size = Vector3(0.40, 0.30, 0.34)
+	head.mesh = head_mesh
+	head.position = Vector3(0.0, 0.62, -0.11)
+	head.rotation_degrees.x = -6.0
+	head.material_override = _make_material(Color("#d95d6f"))
+	visual_root.add_child(head)
+
+	for x in [-0.12, 0.12]:
+		var eye := MeshInstance3D.new()
+		eye.name = "MonsterEye"
+		var eye_mesh := BoxMesh.new()
+		eye_mesh.size = Vector3(0.07, 0.07, 0.035)
+		eye.mesh = eye_mesh
+		eye.position = Vector3(x, 0.66, -0.295)
+		eye.material_override = _make_material(Color("#fff7ed"))
+		visual_root.add_child(eye)
+
+	for x in [-0.15, 0.15]:
+		var pupil := MeshInstance3D.new()
+		pupil.name = "MonsterPupil"
+		var pupil_mesh := BoxMesh.new()
+		pupil_mesh.size = Vector3(0.028, 0.04, 0.02)
+		pupil.mesh = pupil_mesh
+		pupil.position = Vector3(x, 0.66, -0.318)
+		pupil.material_override = _make_material(Color("#1f2937"))
+		visual_root.add_child(pupil)
+
+	for x in [-0.16, 0.16]:
+		var horn := MeshInstance3D.new()
+		horn.name = "MonsterHorn"
+		var horn_mesh := CylinderMesh.new()
+		horn_mesh.radial_segments = 5
+		horn_mesh.top_radius = 0.0
+		horn_mesh.bottom_radius = 0.055
+		horn_mesh.height = 0.20
+		horn.mesh = horn_mesh
+		horn.position = Vector3(x, 0.83, -0.05)
+		horn.rotation_degrees = Vector3(18.0, 0.0, -18.0 if x < 0.0 else 18.0)
+		horn.material_override = _make_material(Color("#ffd08a"))
+		visual_root.add_child(horn)
+
+	for x in [-0.19, 0.19]:
+		for z in [-0.14, 0.16]:
+			var leg := MeshInstance3D.new()
+			leg.name = "MonsterLeg"
+			var leg_mesh := BoxMesh.new()
+			leg_mesh.size = Vector3(0.10, 0.18, 0.12)
+			leg.mesh = leg_mesh
+			leg.position = Vector3(x, 0.12, z)
+			leg.material_override = _make_material(Color("#8f354d"))
+			visual_root.add_child(leg)
+
+	var nose := MeshInstance3D.new()
+	nose.name = "ForwardNose"
+	var nose_mesh := BoxMesh.new()
+	nose_mesh.size = Vector3(0.12, 0.08, 0.09)
+	nose.mesh = nose_mesh
+	nose.position = Vector3(0.0, 0.58, -0.34)
+	nose.material_override = _make_material(Color("#7c2d3f"))
+	visual_root.add_child(nose)
+
+func _face_direction(direction: Vector3) -> void:
+	if visual_root == null or direction.length() < 0.001:
+		return
+	visual_root.rotation.y = atan2(direction.x, direction.z)
 
 func _make_material(color: Color) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
