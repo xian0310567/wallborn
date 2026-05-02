@@ -312,34 +312,59 @@ func _create_asset_fallback(node_name: String, position: Vector3, scale_value: V
 	fallback.add_child(mesh_instance)
 	return fallback
 
+func _create_world_base() -> MeshInstance3D:
+	var base := MeshInstance3D.new()
+	base.name = "DioramaGroundBase"
+	var mesh := BoxMesh.new()
+	var board_size: Vector2 = grid_view.board_size(grid.size)
+	mesh.size = Vector3(board_size.x + 2.4, 0.18, board_size.y + 2.4)
+	base.mesh = mesh
+	base.position = grid_view.board_center(grid.size) + Vector3(0.0, -0.16, 0.0)
+	base.material_override = _make_material(Color("#6fa457"))
+	return base
+
 func _create_cell_mesh(cell: Vector2i) -> Node3D:
 	var root := Node3D.new()
-	root.name = "DioramaCell_%s_%s" % [cell.x, cell.y]
+	root.name = "TerrainCell_%s_%s" % [cell.x, cell.y]
 	root.position = grid_view.cell_to_world(cell)
 
-	var base := MeshInstance3D.new()
-	base.name = "TileBase"
-	var base_mesh := BoxMesh.new()
-	base_mesh.size = Vector3(CELL_SIZE * 0.94, 0.16, CELL_SIZE * 0.94)
-	base.mesh = base_mesh
-	base.position = Vector3(0.0, -0.08, 0.0)
-	base.material_override = _make_material(_cell_side_color(cell))
-	root.add_child(base)
-
 	var top := MeshInstance3D.new()
-	top.name = "TileTop"
+	top.name = "TerrainPatch"
 	var top_mesh := BoxMesh.new()
-	top_mesh.size = Vector3(CELL_SIZE * 0.82, 0.055, CELL_SIZE * 0.82)
+	var patch_size := 0.96 if path.has(cell) else 0.90 + float((cell.x * 7 + cell.y * 3) % 4) * 0.015
+	top_mesh.size = Vector3(CELL_SIZE * patch_size, 0.035, CELL_SIZE * patch_size)
 	top.mesh = top_mesh
-	top.position = Vector3(0.0, 0.025, 0.0)
+	top.position = Vector3(0.0, _cell_height_offset(cell), 0.0)
+	top.rotation_degrees.y = float((cell.x * 11 + cell.y * 17) % 4) * 1.5
 	top.material_override = _make_material(_cell_top_color(cell))
 	root.add_child(top)
 
+	if _should_add_grass_blade(cell):
+		root.add_child(_create_grass_chip(cell))
+
 	if grid.get_cell_type(cell) == grid.CELL_START:
-		root.add_child(_create_tile_icon(Color("#bbf7d0"), 0.27))
+		root.add_child(_create_tile_icon(Color("#bbf7d0"), 0.24))
 	elif grid.get_cell_type(cell) == grid.CELL_GOAL:
-		root.add_child(_create_tile_icon(Color("#fecaca"), 0.31))
+		root.add_child(_create_tile_icon(Color("#fecaca"), 0.28))
 	return root
+
+func _create_grass_chip(cell: Vector2i) -> MeshInstance3D:
+	var chip := MeshInstance3D.new()
+	chip.name = "GrassChip"
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.18, 0.018, 0.05)
+	chip.mesh = mesh
+	chip.position = Vector3(float((cell.x * 13) % 7 - 3) * 0.06, 0.044, float((cell.y * 17) % 7 - 3) * 0.055)
+	chip.rotation_degrees.y = float((cell.x * 31 + cell.y * 19) % 360)
+	chip.material_override = _make_material(Color("#c7e37a"))
+	return chip
+
+func _should_add_grass_blade(cell: Vector2i) -> bool:
+	if path.has(cell):
+		return false
+	if grid.get_cell_type(cell) != grid.CELL_EMPTY:
+		return false
+	return (cell.x * 5 + cell.y * 7) % 9 == 0
 
 func _create_tile_icon(color: Color, radius: float) -> MeshInstance3D:
 	var icon := MeshInstance3D.new()
@@ -349,24 +374,47 @@ func _create_tile_icon(color: Color, radius: float) -> MeshInstance3D:
 	mesh.bottom_radius = radius
 	mesh.height = 0.025
 	icon.mesh = mesh
-	icon.position = Vector3(0.0, 0.072, 0.0)
+	icon.position = Vector3(0.0, 0.075, 0.0)
 	icon.material_override = _make_material(color)
 	return icon
+
+func _cell_height_offset(cell: Vector2i) -> float:
+	if path.has(cell):
+		return 0.005
+	return 0.018 + float((cell.x * 13 + cell.y * 29) % 5) * 0.004
 
 func _cell_top_color(cell: Vector2i) -> Color:
 	match grid.get_cell_type(cell):
 		grid.CELL_START:
-			return Color("#34d399")
+			return Color("#4ade80")
 		grid.CELL_GOAL:
 			return Color("#fb7185")
 		grid.CELL_BLOCKED:
-			return Color("#94a3b8")
-	var alternate := (cell.x * 3 + cell.y * 5) % 4
-	if alternate == 0:
-		return Color("#9bd66f")
-	if alternate == 1:
-		return Color("#8fcb63")
-	return Color("#a7d97a")
+			return Color("#8fa2ae")
+	if path.has(cell):
+		return _path_ground_color(cell)
+	if _is_forest_zone(cell):
+		return _variant_color(cell, Color("#6faa52"), Color("#83bd5d"), Color("#5f9949"))
+	if _is_stone_zone(cell):
+		return _variant_color(cell, Color("#94a68d"), Color("#879b84"), Color("#a4b49a"))
+	return _variant_color(cell, Color("#8fc65f"), Color("#a8d66e"), Color("#7eb656"))
+
+func _path_ground_color(cell: Vector2i) -> Color:
+	return _variant_color(cell, Color("#b98555"), Color("#c99562"), Color("#a8764d"))
+
+func _variant_color(cell: Vector2i, a: Color, b: Color, c: Color) -> Color:
+	var value := (cell.x * 3 + cell.y * 5) % 6
+	if value <= 1:
+		return a
+	if value <= 3:
+		return b
+	return c
+
+func _is_forest_zone(cell: Vector2i) -> bool:
+	return cell.distance_to(Vector2i(6, 5)) < 8.0 or cell.distance_to(Vector2i(14, 22)) < 8.5 or cell.distance_to(Vector2i(38, 7)) < 7.5
+
+func _is_stone_zone(cell: Vector2i) -> bool:
+	return cell.distance_to(Vector2i(25, 6)) < 6.5 or cell.distance_to(Vector2i(32, 20)) < 6.5 or cell.y <= 1 or cell.y >= grid.size.y - 2
 
 func _cell_side_color(cell: Vector2i) -> Color:
 	match grid.get_cell_type(cell):
@@ -519,8 +567,8 @@ func _refresh_path_markers() -> void:
 	var flash_ratio := clampf(path_reroute_flash / REROUTE_FLASH_DURATION, 0.0, 1.0)
 	var flow_progress := 1.0 - flash_ratio
 	var active_flow_index := clampi(roundi(flow_progress * float(maxi(path.size() - 1, 0))), 0, maxi(path.size() - 1, 0))
-	var path_color := Color("#b98250").lerp(Color("#f3c16f"), flash_ratio * 0.35)
-	var segment_color := Color("#8b5e34").lerp(Color("#dba85b"), flash_ratio * 0.45)
+	var path_color := Color("#9a6a42").lerp(Color("#d8a15c"), flash_ratio * 0.25)
+	var segment_color := Color("#7b5133").lerp(Color("#bd8550"), flash_ratio * 0.35)
 	var pulse_color := Color("#f59e0b").lerp(Color("#fff7ad"), flash_ratio)
 	var flow_color := Color("#fef3c7").lerp(Color("#38bdf8"), 0.28)
 
@@ -532,15 +580,15 @@ func _refresh_path_markers() -> void:
 		var marker := MeshInstance3D.new()
 		marker.name = "PathTile_%s_%s" % [cell.x, cell.y]
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.52, 0.03, 0.52)
+		mesh.size = Vector3(0.38, 0.022, 0.38)
 		marker.mesh = mesh
 		marker.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.082 + flash_ratio * 0.018, 0.0)
 		marker.material_override = _make_material(path_color)
 		marker_root.add_child(marker)
 
-		if i % 5 == 0 and i > 0 and i < path.size() - 1:
-			var prop_asset: String = PATH_PROP_ASSETS[int(i / 5) % PATH_PROP_ASSETS.size()]
-			var prop := _create_nature_asset(prop_asset, "PathProp", grid_view.cell_to_world(cell) + Vector3(0.0, 0.095, 0.0), Vector3.ONE * 0.42, float((i * 23) % 360))
+		if i % 3 == 0 and i > 0 and i < path.size() - 1:
+			var prop_asset: String = PATH_PROP_ASSETS[int(i / 3) % PATH_PROP_ASSETS.size()]
+			var prop := _create_nature_asset(prop_asset, "PathProp", grid_view.cell_to_world(cell) + Vector3(0.0, 0.095, 0.0), Vector3.ONE * 0.52, float((i * 23) % 360))
 			marker_root.add_child(prop)
 
 		if path_reroute_flash > 0.0 and abs(i - active_flow_index) <= 1:
@@ -579,7 +627,7 @@ func _create_path_segment(from_pos: Vector3, to_pos: Vector3, color: Color) -> M
 	var segment := MeshInstance3D.new()
 	segment.name = "PathSegment"
 	var mesh := BoxMesh.new()
-	mesh.size = Vector3(0.24, 0.03, maxf(length, 0.01))
+	mesh.size = Vector3(0.14, 0.022, maxf(length, 0.01))
 	segment.mesh = mesh
 	segment.position = (from_pos + to_pos) * 0.5
 	segment.rotation.y = atan2(delta.x, delta.z)
