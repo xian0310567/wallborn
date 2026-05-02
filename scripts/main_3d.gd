@@ -524,36 +524,99 @@ func _add_defense_unit(cell: Vector2i) -> void:
 	unit.name = "WallTurret_%s_%s" % [cell.x, cell.y]
 	unit.position = grid_view.cell_to_world(cell)
 
-	for offset in [-0.22, 0.0, 0.22]:
-		var block := MeshInstance3D.new()
-		block.name = "WallBlock"
-		var block_mesh := BoxMesh.new()
-		block_mesh.size = Vector3(0.23, 0.52 + absf(offset) * 0.24, 0.58)
-		block.mesh = block_mesh
-		block.position = Vector3(offset, 0.30 + absf(offset) * 0.12, 0.0)
-		block.material_override = _make_material(Color("#8ea3b7"))
-		unit.add_child(block)
+	unit.add_child(_create_defense_footprint())
+
+	var wall_material := _make_material(Color("#6f8491"))
+	var wall_dark_material := _make_material(Color("#526977"))
+	var trim_material := _make_material(Color("#d6b16f"))
+	var cannon_material := _make_material(Color("#e7eef2"))
+	var barrel_material := _make_material(Color("#2f4050"))
+
+	var back_wall := _create_defense_block("BackWall", Vector3(0.0, 0.26, 0.30), Vector3(0.82, 0.42, 0.18), wall_material)
+	unit.add_child(back_wall)
+	var front_wall := _create_defense_block("FrontWall", Vector3(0.0, 0.22, -0.30), Vector3(0.72, 0.34, 0.16), wall_dark_material)
+	unit.add_child(front_wall)
+	var left_post := _create_defense_block("LeftPost", Vector3(-0.37, 0.33, 0.0), Vector3(0.18, 0.58, 0.72), wall_material)
+	unit.add_child(left_post)
+	var right_post := _create_defense_block("RightPost", Vector3(0.37, 0.33, 0.0), Vector3(0.18, 0.58, 0.72), wall_material)
+	unit.add_child(right_post)
+
+	for x in [-0.25, 0.0, 0.25]:
+		unit.add_child(_create_defense_block("Crenel", Vector3(x, 0.62, 0.31), Vector3(0.16, 0.20, 0.18), trim_material))
+
+	var tower_base := MeshInstance3D.new()
+	tower_base.name = "ToyTowerBase"
+	var base_mesh := CylinderMesh.new()
+	base_mesh.radial_segments = 8
+	base_mesh.top_radius = 0.32
+	base_mesh.bottom_radius = 0.40
+	base_mesh.height = 0.28
+	tower_base.mesh = base_mesh
+	tower_base.position = Vector3(0.0, 0.57, 0.0)
+	tower_base.material_override = wall_dark_material
+	unit.add_child(tower_base)
 
 	var turret := MeshInstance3D.new()
+	turret.name = "ToyCannonTurret"
 	var turret_mesh := CylinderMesh.new()
 	turret_mesh.radial_segments = 8
 	turret_mesh.top_radius = 0.24
-	turret_mesh.bottom_radius = 0.31
-	turret_mesh.height = 0.26
+	turret_mesh.bottom_radius = 0.30
+	turret_mesh.height = 0.22
 	turret.mesh = turret_mesh
-	turret.position = Vector3(0.0, 0.78, 0.0)
-	turret.material_override = _make_material(Color("#e2e8f0"))
+	turret.position = Vector3(0.0, 0.82, 0.0)
+	turret.material_override = cannon_material
 	unit.add_child(turret)
 
 	var barrel := MeshInstance3D.new()
+	barrel.name = "ToyCannonBarrel"
 	var barrel_mesh := BoxMesh.new()
-	barrel_mesh.size = Vector3(0.16, 0.12, 0.62)
+	barrel_mesh.size = Vector3(0.15, 0.13, 0.64)
 	barrel.mesh = barrel_mesh
-	barrel.position = Vector3(0.0, 0.82, -0.36)
-	barrel.material_override = _make_material(Color("#f59e0b"))
+	barrel.position = Vector3(0.0, 0.84, -0.42)
+	barrel.material_override = barrel_material
 	unit.add_child(barrel)
 
+	var muzzle := MeshInstance3D.new()
+	muzzle.name = "ToyCannonMuzzle"
+	var muzzle_mesh := CylinderMesh.new()
+	muzzle_mesh.radial_segments = 8
+	muzzle_mesh.top_radius = 0.10
+	muzzle_mesh.bottom_radius = 0.10
+	muzzle_mesh.height = 0.12
+	muzzle.mesh = muzzle_mesh
+	muzzle.position = Vector3(0.0, 0.84, -0.78)
+	muzzle.rotation_degrees.x = 90.0
+	muzzle.material_override = barrel_material
+	unit.add_child(muzzle)
+
+	var banner := _create_defense_block("BlueBanner", Vector3(0.0, 0.42, 0.43), Vector3(0.34, 0.16, 0.035), _make_material(Color("#5ab0d6")))
+	unit.add_child(banner)
+
 	defense_root.add_child(unit)
+
+func _create_defense_footprint() -> MeshInstance3D:
+	var footprint := MeshInstance3D.new()
+	footprint.name = "DefenseFootprint"
+	var mesh := CylinderMesh.new()
+	mesh.radial_segments = 16
+	mesh.top_radius = 0.48
+	mesh.bottom_radius = 0.48
+	mesh.height = 0.018
+	footprint.mesh = mesh
+	footprint.position = Vector3(0.0, 0.095, 0.0)
+	footprint.material_override = _make_material(Color("#3f5360"))
+	return footprint
+
+func _create_defense_block(block_name: String, position: Vector3, size: Vector3, material: Material) -> MeshInstance3D:
+	var block := MeshInstance3D.new()
+	block.name = block_name
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	block.mesh = mesh
+	block.position = position
+	block.material_override = material
+	return block
 
 func _refresh_path_markers() -> void:
 	_clear_children(marker_root)
