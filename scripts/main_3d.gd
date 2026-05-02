@@ -27,6 +27,7 @@ var board_root: Node3D
 var marker_root: Node3D
 var defense_root: Node3D
 var enemy_root: Node3D
+var decoration_root: Node3D
 var camera_rig: Node3D
 var status_label: Label
 var core_indicator_label: Label
@@ -41,6 +42,7 @@ func _ready() -> void:
 	_create_camera()
 	_create_hud()
 	_rebuild_board()
+	_rebuild_decorations()
 	_refresh_path_markers()
 	_update_status()
 	print("Wallborn 3D board boot OK")
@@ -67,6 +69,10 @@ func _create_roots() -> void:
 	enemy_root = Node3D.new()
 	enemy_root.name = "Enemies"
 	add_child(enemy_root)
+
+	decoration_root = Node3D.new()
+	decoration_root.name = "Landmarks"
+	add_child(decoration_root)
 
 func _create_light() -> void:
 	var light := DirectionalLight3D.new()
@@ -149,6 +155,116 @@ func _rebuild_board() -> void:
 	_clear_children(board_root)
 	for cell in grid_view.get_cells_in_draw_order(grid.size):
 		board_root.add_child(_create_cell_mesh(cell))
+
+func _rebuild_decorations() -> void:
+	_clear_children(decoration_root)
+	_add_forest_cluster(Vector2i(7, 5), 7, "NorthWestGrove")
+	_add_forest_cluster(Vector2i(13, 22), 9, "SouthGrove")
+	_add_forest_cluster(Vector2i(37, 7), 8, "CoreSideWoods")
+	_add_rock_field(Vector2i(25, 6), "StoneField")
+	_add_rock_field(Vector2i(31, 20), "SouthStoneField")
+	_add_ruin(Vector2i(20, 15), "CentralRuin")
+	_add_ruin(Vector2i(41, 18), "BrokenGate")
+
+func _add_forest_cluster(center: Vector2i, count: int, landmark_name: String) -> void:
+	var root := Node3D.new()
+	root.name = landmark_name
+	decoration_root.add_child(root)
+	for i in range(count):
+		var offset := Vector2i((i * 2) % 5 - 2, int(i / 2) % 4 - 1)
+		var cell := center + offset
+		if not _can_decorate_cell(cell):
+			continue
+		root.add_child(_create_tree(cell, i))
+
+func _add_rock_field(center: Vector2i, landmark_name: String) -> void:
+	var root := Node3D.new()
+	root.name = landmark_name
+	decoration_root.add_child(root)
+	for i in range(7):
+		var offset := Vector2i((i * 3) % 5 - 2, (i * 2) % 4 - 1)
+		var cell := center + offset
+		if not _can_decorate_cell(cell):
+			continue
+		root.add_child(_create_rock(cell, i))
+
+func _add_ruin(center: Vector2i, landmark_name: String) -> void:
+	var root := Node3D.new()
+	root.name = landmark_name
+	root.position = grid_view.cell_to_world(center)
+	decoration_root.add_child(root)
+
+	for i in range(4):
+		var pillar := MeshInstance3D.new()
+		pillar.name = "RuinPillar"
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(0.28, 0.8 - float(i % 2) * 0.18, 0.28)
+		pillar.mesh = mesh
+		pillar.position = Vector3(-0.45 + float(i % 2) * 0.9, 0.36, -0.45 + float(i / 2) * 0.9)
+		pillar.rotation_degrees.y = float(i) * 7.0
+		pillar.material_override = _make_material(Color("#c7b299"))
+		root.add_child(pillar)
+
+	var slab := MeshInstance3D.new()
+	slab.name = "RuinSlab"
+	var slab_mesh := BoxMesh.new()
+	slab_mesh.size = Vector3(1.4, 0.12, 0.38)
+	slab.mesh = slab_mesh
+	slab.position = Vector3(0.0, 0.16, 0.0)
+	slab.rotation_degrees.y = 18.0
+	slab.material_override = _make_material(Color("#a8917c"))
+	root.add_child(slab)
+
+func _can_decorate_cell(cell: Vector2i) -> bool:
+	if not grid.is_in_bounds(cell):
+		return false
+	if cell == grid.start_cell or cell == grid.goal_cell:
+		return false
+	return true
+
+func _create_tree(cell: Vector2i, index: int) -> Node3D:
+	var root := Node3D.new()
+	root.name = "Tree_%s_%s" % [cell.x, cell.y]
+	root.position = grid_view.cell_to_world(cell) + Vector3(float(index % 3 - 1) * 0.11, 0.0, float((index + 1) % 3 - 1) * 0.09)
+
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.radial_segments = 6
+	trunk_mesh.top_radius = 0.07
+	trunk_mesh.bottom_radius = 0.09
+	trunk_mesh.height = 0.42
+	trunk.mesh = trunk_mesh
+	trunk.position = Vector3(0.0, 0.28, 0.0)
+	trunk.material_override = _make_material(Color("#7c4a2d"))
+	root.add_child(trunk)
+
+	var leaves := MeshInstance3D.new()
+	var leaves_mesh := SphereMesh.new()
+	leaves_mesh.radial_segments = 8
+	leaves_mesh.rings = 4
+	leaves_mesh.radius = 0.28 + float(index % 3) * 0.035
+	leaves_mesh.height = 0.48
+	leaves.mesh = leaves_mesh
+	leaves.position = Vector3(0.0, 0.62, 0.0)
+	leaves.scale = Vector3(1.05, 0.9, 1.05)
+	leaves.material_override = _make_material(Color("#3faa5f") if index % 2 == 0 else Color("#2f8f55"))
+	root.add_child(leaves)
+	return root
+
+func _create_rock(cell: Vector2i, index: int) -> Node3D:
+	var root := Node3D.new()
+	root.name = "Rock_%s_%s" % [cell.x, cell.y]
+	root.position = grid_view.cell_to_world(cell) + Vector3(float(index % 2) * 0.16, 0.0, float(index % 3 - 1) * 0.12)
+
+	var rock := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.32 + float(index % 3) * 0.07, 0.2 + float(index % 2) * 0.08, 0.28 + float(index % 4) * 0.04)
+	rock.mesh = mesh
+	rock.position = Vector3(0.0, 0.12, 0.0)
+	rock.rotation_degrees = Vector3(float(index % 3) * 6.0, float(index) * 19.0, float(index % 2) * 5.0)
+	rock.material_override = _make_material(Color("#94a3b8") if index % 2 == 0 else Color("#7c8797"))
+	root.add_child(rock)
+	return root
 
 func _create_cell_mesh(cell: Vector2i) -> Node3D:
 	var root := Node3D.new()

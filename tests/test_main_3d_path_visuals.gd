@@ -14,6 +14,7 @@ func _initialize() -> void:
 	_assert_true(main.camera_rig.home_position == main.grid_view.cell_to_world(main.grid.goal_cell), "camera home should focus the core on large maps")
 	_assert_true(main.core_indicator_label != null, "3D main should create a core focus indicator")
 	_assert_true(main.enemy_indicator_label != null, "3D main should create an enemy focus indicator")
+	_assert_true(main.decoration_root.get_child_count() >= 6, "large map should include visible landmark clusters")
 
 	var place_cell := Vector2i(5, 14)
 	var place_world: Vector3 = main.grid_view.cell_to_world(place_cell)
