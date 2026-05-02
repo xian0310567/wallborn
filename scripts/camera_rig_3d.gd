@@ -36,7 +36,6 @@ func focus_on(target: Vector3) -> void:
 	_apply_camera_transform()
 
 func configure_focus_bounds(center: Vector3, board_size: Vector3, margin: float = bounds_margin) -> void:
-	home_position = center
 	var half_size := board_size * 0.5
 	focus_min = center - Vector3(half_size.x + margin, 0.0, half_size.z + margin)
 	focus_max = center + Vector3(half_size.x + margin, 0.0, half_size.z + margin)
@@ -51,6 +50,10 @@ func reset_home() -> void:
 		camera.size = default_ortho_size
 	clamp_to_focus_bounds()
 	_apply_camera_transform()
+
+func set_home_position(target: Vector3) -> void:
+	home_position = target
+	clamp_to_focus_bounds()
 
 func _process(delta: float) -> void:
 	var input := Vector2.ZERO

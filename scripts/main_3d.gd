@@ -29,6 +29,9 @@ var defense_root: Node3D
 var enemy_root: Node3D
 var camera_rig: Node3D
 var status_label: Label
+var core_indicator_label: Label
+var enemy_indicator_label: Label
+var focus_hint_label: Label
 var start_wave_button: Button
 
 func _ready() -> void:
@@ -46,6 +49,7 @@ func _process(delta: float) -> void:
 	_update_wave(delta)
 	_update_enemies(delta)
 	_update_path_flash(delta)
+	_update_focus_indicators()
 
 func _create_roots() -> void:
 	board_root = Node3D.new()
@@ -86,8 +90,10 @@ func _create_camera() -> void:
 	camera_rig = CameraRig3DScript.new()
 	camera_rig.name = "CameraRig3D"
 	add_child(camera_rig)
-	camera_rig.focus_on(grid_view.board_center(grid.size))
+	var core_position: Vector3 = grid_view.cell_to_world(grid.goal_cell)
+	camera_rig.focus_on(core_position)
 	camera_rig.configure_focus_bounds(grid_view.board_center(grid.size), grid_view.board_size(grid.size), 4.0)
+	camera_rig.set_home_position(core_position)
 
 func _create_hud() -> void:
 	var canvas := CanvasLayer.new()
@@ -111,12 +117,33 @@ func _create_hud() -> void:
 	status_label.add_theme_font_size_override("font_size", 16)
 	margin.add_child(status_label)
 
+	core_indicator_label = _create_indicator_label("CORE", Color("#fb7185"))
+	canvas.add_child(core_indicator_label)
+
+	enemy_indicator_label = _create_indicator_label("ENEMY", Color("#f97316"))
+	canvas.add_child(enemy_indicator_label)
+
+	focus_hint_label = _create_indicator_label("SPACE: CORE", Color("#fef3c7"))
+	focus_hint_label.position = Vector2(24, 674)
+	canvas.add_child(focus_hint_label)
+
 	start_wave_button = Button.new()
 	start_wave_button.text = "START 3D WAVE"
 	start_wave_button.position = Vector2(24, 122)
 	start_wave_button.size = Vector2(180, 44)
 	start_wave_button.pressed.connect(start_wave)
 	canvas.add_child(start_wave_button)
+
+func _create_indicator_label(text: String, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.visible = false
+	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.75))
+	label.add_theme_constant_override("shadow_offset_x", 2)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+	return label
 
 func _rebuild_board() -> void:
 	_clear_children(board_root)
@@ -267,6 +294,7 @@ func _on_enemy_reached_goal(enemy: Node) -> void:
 		wave_active = false
 		start_wave_button.disabled = false
 	_update_status()
+	_update_focus_indicators()
 
 func _repath_enemies() -> void:
 	for enemy in enemies:
@@ -411,7 +439,7 @@ func _update_status() -> void:
 	var camera_center := Vector3.ZERO
 	if camera_rig != null:
 		camera_center = camera_rig.global_position
-	var goal_direction := _direction_label(grid_view.cell_to_world(grid.goal_cell) - camera_center)
+	var goal_direction: String = _direction_label(grid_view.cell_to_world(grid.goal_cell) - camera_center)
 	var enemy_direction := "-"
 	if not enemies.is_empty() and is_instance_valid(enemies[0]):
 		enemy_direction = _direction_label(enemies[0].global_position - camera_center)
@@ -425,6 +453,72 @@ func _update_status() -> void:
 		goal_direction,
 		enemy_direction,
 	]
+
+func _update_focus_indicators() -> void:
+	if camera_rig == null:
+		return
+	var camera: Camera3D = camera_rig.get("camera") as Camera3D
+	if camera == null:
+		return
+	var viewport_rect: Rect2 = get_viewport().get_visible_rect()
+	var core_world: Vector3 = grid_view.cell_to_world(grid.goal_cell) + Vector3(0.0, 0.8, 0.0)
+	_place_edge_indicator(core_indicator_label, camera, core_world, viewport_rect, "CORE")
+
+	var danger_enemy: Node = _get_focus_enemy()
+	if danger_enemy != null:
+		var enemy_world: Vector3 = danger_enemy.global_position + Vector3(0.0, 0.8, 0.0)
+		var distance_to_core: float = danger_enemy.global_position.distance_to(grid_view.cell_to_world(grid.goal_cell))
+		var label_text := "DANGER" if distance_to_core < 8.0 else "ENEMY"
+		_place_edge_indicator(enemy_indicator_label, camera, enemy_world, viewport_rect, label_text)
+	else:
+		enemy_indicator_label.visible = false
+
+	if focus_hint_label != null:
+		focus_hint_label.visible = true
+
+func _get_focus_enemy() -> Node:
+	var best_enemy: Node = null
+	var best_distance := INF
+	var core_pos: Vector3 = grid_view.cell_to_world(grid.goal_cell)
+	for enemy in enemies:
+		if not is_instance_valid(enemy):
+			continue
+		var distance: float = enemy.global_position.distance_to(core_pos)
+		if distance < best_distance:
+			best_enemy = enemy
+			best_distance = distance
+	return best_enemy
+
+func _place_edge_indicator(label: Label, camera: Camera3D, world_position: Vector3, viewport_rect: Rect2, text: String) -> void:
+	if label == null:
+		return
+	var screen_pos: Vector2 = camera.unproject_position(world_position)
+	var margin := 28.0
+	var max_pos := viewport_rect.size - Vector2(margin, margin)
+	var min_pos := Vector2(margin, margin)
+	var inside := screen_pos.x >= min_pos.x and screen_pos.y >= min_pos.y and screen_pos.x <= max_pos.x and screen_pos.y <= max_pos.y
+	label.visible = not inside
+	if not label.visible:
+		return
+	var clamped_pos := Vector2(
+		clampf(screen_pos.x, min_pos.x, max_pos.x),
+		clampf(screen_pos.y, min_pos.y, max_pos.y)
+	)
+	var center := viewport_rect.size * 0.5
+	var direction := _screen_direction_label(screen_pos - center)
+	label.text = "%s %s" % [direction, text]
+	label.position = clamped_pos - Vector2(40, 14)
+
+func _screen_direction_label(delta: Vector2) -> String:
+	if delta.length() < 0.01:
+		return "•"
+	var horizontal := "→" if delta.x > 0.0 else "←"
+	var vertical := "↓" if delta.y > 0.0 else "↑"
+	if absf(delta.x) > absf(delta.y) * 1.6:
+		return horizontal
+	if absf(delta.y) > absf(delta.x) * 1.6:
+		return vertical
+	return vertical + horizontal
 
 func _direction_label(delta: Vector3) -> String:
 	var planar := Vector2(delta.x, delta.z)
