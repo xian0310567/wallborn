@@ -186,13 +186,16 @@ func _rebuild_board() -> void:
 
 func _rebuild_decorations() -> void:
 	_clear_children(decoration_root)
-	_add_asset_forest_cluster(Vector2i(6, 5), 16, "NorthWestToyForest")
-	_add_asset_forest_cluster(Vector2i(14, 22), 18, "SouthToyForest")
-	_add_asset_forest_cluster(Vector2i(38, 7), 15, "CoreSideToyForest")
-	_add_asset_rock_field(Vector2i(25, 6), "NorthStoneCut")
-	_add_asset_rock_field(Vector2i(32, 20), "SouthStoneCut")
-	_add_asset_camp(Vector2i(19, 15), "CentralCampLandmark")
+	_add_asset_forest_cluster(Vector2i(6, 5), 13, "SpawnSideGrove")
+	_add_asset_forest_cluster(Vector2i(13, 22), 15, "SouthWoodline")
+	_add_asset_forest_cluster(Vector2i(39, 7), 12, "CoreSideOrchard")
+	_add_asset_rock_field(Vector2i(22, 7), "NorthPathStoneGate")
+	_add_asset_rock_field(Vector2i(30, 20), "SouthPathStoneGate")
+	_add_asset_camp(Vector2i(18, 15), "MidRouteCampLandmark")
 	_add_asset_camp(Vector2i(42, 18), "CoreOutpostLandmark")
+	_add_pathside_landmark(Vector2i(9, 14), Vector2i(0, -1), "SpawnTrailMarker")
+	_add_pathside_landmark(Vector2i(27, 14), Vector2i(0, 1), "CentralChokeMarker")
+	_add_core_shelter_landmark()
 	_add_border_cliff_line(0, "NorthCliffEdge")
 	_add_border_cliff_line(grid.size.y - 1, "SouthCliffEdge")
 
@@ -239,6 +242,44 @@ func _add_asset_camp(center: Vector2i, landmark_name: String) -> void:
 		if not _can_decorate_cell(cell):
 			continue
 		root.add_child(_create_nature_asset(item["asset"], "LandmarkAsset", grid_view.cell_to_world(cell), Vector3.ONE * float(item["scale"]), float(item["yaw"])))
+
+func _add_pathside_landmark(anchor: Vector2i, side: Vector2i, landmark_name: String) -> void:
+	var root := Node3D.new()
+	root.name = landmark_name
+	decoration_root.add_child(root)
+	var placements := [
+		{"asset": "campfire_logs", "offset": side, "scale": 0.40, "yaw": 0.0},
+		{"asset": ROCK_ASSETS[0], "offset": side + Vector2i(-1, 0), "scale": 0.36, "yaw": 18.0},
+		{"asset": ROCK_ASSETS[2], "offset": side + Vector2i(1, 0), "scale": 0.34, "yaw": -24.0},
+		{"asset": "fence_simpleLow", "offset": side + Vector2i(-2, 0), "scale": 0.48, "yaw": 90.0},
+		{"asset": "fence_simpleLow", "offset": side + Vector2i(2, 0), "scale": 0.48, "yaw": 90.0},
+	]
+	for item in placements:
+		var cell: Vector2i = anchor + item["offset"]
+		if not _can_decorate_cell(cell):
+			continue
+		root.add_child(_create_nature_asset(item["asset"], "PathsideLandmarkAsset", grid_view.cell_to_world(cell), Vector3.ONE * float(item["scale"]), float(item["yaw"])))
+
+func _add_core_shelter_landmark() -> void:
+	var root := Node3D.new()
+	root.name = "CoreShelterRing"
+	decoration_root.add_child(root)
+	var center := grid.goal_cell
+	var placements := [
+		{"asset": "tent_detailedClosed", "offset": Vector2i(-3, -2), "scale": 0.50, "yaw": 25.0},
+		{"asset": "log_stackLarge", "offset": Vector2i(-3, 2), "scale": 0.44, "yaw": -20.0},
+		{"asset": "fence_simpleLow", "offset": Vector2i(-2, -3), "scale": 0.50, "yaw": 0.0},
+		{"asset": "fence_simpleLow", "offset": Vector2i(-1, -3), "scale": 0.50, "yaw": 0.0},
+		{"asset": "fence_simpleLow", "offset": Vector2i(-2, 3), "scale": 0.50, "yaw": 0.0},
+		{"asset": "fence_simpleLow", "offset": Vector2i(-1, 3), "scale": 0.50, "yaw": 0.0},
+		{"asset": ROCK_ASSETS[3], "offset": Vector2i(1, -2), "scale": 0.38, "yaw": 10.0},
+		{"asset": ROCK_ASSETS[4], "offset": Vector2i(1, 2), "scale": 0.36, "yaw": -12.0},
+	]
+	for item in placements:
+		var cell: Vector2i = center + item["offset"]
+		if not _can_decorate_cell(cell):
+			continue
+		root.add_child(_create_nature_asset(item["asset"], "CoreShelterAsset", grid_view.cell_to_world(cell), Vector3.ONE * float(item["scale"]), float(item["yaw"])))
 
 func _add_border_cliff_line(y: int, landmark_name: String) -> void:
 	var root := Node3D.new()
