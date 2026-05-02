@@ -339,6 +339,8 @@ func _create_cell_mesh(cell: Vector2i) -> Node3D:
 	if _should_add_grass_blade(cell):
 		root.add_child(_create_grass_chip(cell))
 
+
+	_add_terrain_edge_blocks(root, cell)
 	if grid.get_cell_type(cell) == grid.CELL_START:
 		root.add_child(_create_tile_icon(Color("#bbf7d0"), 0.24))
 	elif grid.get_cell_type(cell) == grid.CELL_GOAL:
@@ -361,8 +363,28 @@ func _should_add_grass_blade(cell: Vector2i) -> bool:
 		return false
 	if grid.get_cell_type(cell) != grid.CELL_EMPTY:
 		return false
-	return (cell.x * 5 + cell.y * 7) % 9 == 0
+	return (cell.x * 5 + cell.y * 7) % 11 == 0
 
+func _add_terrain_edge_blocks(root: Node3D, cell: Vector2i) -> void:
+	var edge_material := _make_material(Color("#496c3f"))
+	if cell.x == 0:
+		root.add_child(_create_terrain_edge("WestEdge", Vector3(-0.51, -0.035, 0.0), Vector3(0.07, 0.25, 0.98), edge_material))
+	if cell.x == grid.size.x - 1:
+		root.add_child(_create_terrain_edge("EastEdge", Vector3(0.51, -0.035, 0.0), Vector3(0.07, 0.25, 0.98), edge_material))
+	if cell.y == 0:
+		root.add_child(_create_terrain_edge("NorthEdge", Vector3(0.0, -0.035, -0.51), Vector3(0.98, 0.25, 0.07), edge_material))
+	if cell.y == grid.size.y - 1:
+		root.add_child(_create_terrain_edge("SouthEdge", Vector3(0.0, -0.035, 0.51), Vector3(0.98, 0.25, 0.07), edge_material))
+
+func _create_terrain_edge(edge_name: String, position: Vector3, size: Vector3, material: Material) -> MeshInstance3D:
+	var edge := MeshInstance3D.new()
+	edge.name = edge_name
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	edge.mesh = mesh
+	edge.position = position
+	edge.material_override = material
+	return edge
 func _create_tile_icon(color: Color, radius: float) -> MeshInstance3D:
 	var icon := MeshInstance3D.new()
 	icon.name = "TileIcon"
@@ -377,8 +399,12 @@ func _create_tile_icon(color: Color, radius: float) -> MeshInstance3D:
 
 func _cell_height_offset(cell: Vector2i) -> float:
 	if path.has(cell):
-		return 0.005
-	return 0.018 + float((cell.x * 13 + cell.y * 29) % 5) * 0.004
+		return 0.018
+	if _is_stone_zone(cell):
+		return 0.052 + float((cell.x * 13 + cell.y * 29) % 3) * 0.004
+	if _is_forest_zone(cell):
+		return 0.044 + float((cell.x * 13 + cell.y * 29) % 3) * 0.004
+	return 0.036 + float((cell.x * 13 + cell.y * 29) % 4) * 0.004
 
 func _cell_top_color(cell: Vector2i) -> Color:
 	match grid.get_cell_type(cell):
@@ -842,6 +868,7 @@ func _make_material(color: Color) -> StandardMaterial3D:
 func _clear_children(node: Node) -> void:
 	for child in node.get_children():
 		child.queue_free()
+
 
 
 
