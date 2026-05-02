@@ -207,7 +207,7 @@ func _add_asset_forest_cluster(center: Vector2i, count: int, landmark_name: Stri
 			continue
 		var asset_name: String = TREE_ASSETS[i % TREE_ASSETS.size()]
 		var jitter := Vector3(float((i * 37) % 9 - 4) * 0.035, 0.0, float((i * 19) % 9 - 4) * 0.035)
-		var scale_value := 0.62 + float(i % 4) * 0.08
+		var scale_value := 0.50 + float(i % 4) * 0.06
 		root.add_child(_create_nature_asset(asset_name, "TreeAsset", grid_view.cell_to_world(cell) + jitter, Vector3.ONE * scale_value, float((i * 29) % 360)))
 
 func _add_asset_rock_field(center: Vector2i, landmark_name: String) -> void:
@@ -220,7 +220,7 @@ func _add_asset_rock_field(center: Vector2i, landmark_name: String) -> void:
 		if not _can_decorate_cell(cell):
 			continue
 		var asset_name: String = ROCK_ASSETS[i % ROCK_ASSETS.size()]
-		var scale_value := 0.55 + float(i % 3) * 0.10
+		var scale_value := 0.44 + float(i % 3) * 0.08
 		root.add_child(_create_nature_asset(asset_name, "RockAsset", grid_view.cell_to_world(cell), Vector3.ONE * scale_value, float((i * 41) % 360)))
 
 func _add_asset_camp(center: Vector2i, landmark_name: String) -> void:
@@ -228,11 +228,11 @@ func _add_asset_camp(center: Vector2i, landmark_name: String) -> void:
 	root.name = landmark_name
 	decoration_root.add_child(root)
 	var placements := [
-		{"asset": "campfire_logs", "offset": Vector2i(0, 0), "scale": 0.72, "yaw": 0.0},
-		{"asset": "log_stackLarge", "offset": Vector2i(-1, 1), "scale": 0.62, "yaw": 30.0},
-		{"asset": "tent_detailedClosed", "offset": Vector2i(1, -1), "scale": 0.62, "yaw": -35.0},
-		{"asset": "fence_simpleLow", "offset": Vector2i(-2, 0), "scale": 0.80, "yaw": 90.0},
-		{"asset": "fence_simpleLow", "offset": Vector2i(2, 0), "scale": 0.80, "yaw": 90.0},
+		{"asset": "campfire_logs", "offset": Vector2i(0, 0), "scale": 0.56, "yaw": 0.0},
+		{"asset": "log_stackLarge", "offset": Vector2i(-1, 1), "scale": 0.50, "yaw": 30.0},
+		{"asset": "tent_detailedClosed", "offset": Vector2i(1, -1), "scale": 0.52, "yaw": -35.0},
+		{"asset": "fence_simpleLow", "offset": Vector2i(-2, 0), "scale": 0.62, "yaw": 90.0},
+		{"asset": "fence_simpleLow", "offset": Vector2i(2, 0), "scale": 0.62, "yaw": 90.0},
 	]
 	for item in placements:
 		var cell: Vector2i = center + item["offset"]
@@ -248,7 +248,7 @@ func _add_border_cliff_line(y: int, landmark_name: String) -> void:
 		var cell := Vector2i(x, y)
 		var asset_name := "cliff_block_rock" if x % 8 == 2 else "cliff_blockHalf_rock"
 		var yaw := 0.0 if y == 0 else 180.0
-		root.add_child(_create_nature_asset(asset_name, "CliffEdgeAsset", grid_view.cell_to_world(cell), Vector3.ONE * 0.58, yaw))
+		root.add_child(_create_nature_asset(asset_name, "CliffEdgeAsset", grid_view.cell_to_world(cell), Vector3.ONE * 0.48, yaw))
 
 func _can_decorate_cell(cell: Vector2i) -> bool:
 	if not grid.is_in_bounds(cell):
@@ -564,6 +564,7 @@ func _add_defense_unit(cell: Vector2i) -> void:
 	var unit := Node3D.new()
 	unit.name = "WallTurret_%s_%s" % [cell.x, cell.y]
 	unit.position = grid_view.cell_to_world(cell)
+	unit.scale = Vector3.ONE * 0.90
 
 	unit.add_child(_create_defense_footprint())
 
@@ -685,12 +686,12 @@ func _refresh_path_markers() -> void:
 		underlay.material_override = _make_material(path_color)
 		marker_root.add_child(underlay)
 
-		var ground_asset := _create_nature_asset("ground_pathStraight", "PathGround", world + Vector3(0.0, 0.08, 0.0), Vector3.ONE * (0.44 + flash_ratio * 0.03), _path_asset_yaw(i))
+		var ground_asset := _create_nature_asset("ground_pathStraight", "PathGround", world + Vector3(0.0, 0.08, 0.0), Vector3.ONE * (0.50 + flash_ratio * 0.03), _path_asset_yaw(i))
 		marker_root.add_child(ground_asset)
 
 		if i % 6 == 0 and i > 0 and i < path.size() - 1:
 			var prop_asset: String = PATH_PROP_ASSETS[int(i / 6) % PATH_PROP_ASSETS.size()]
-			var prop := _create_nature_asset(prop_asset, "PathProp", world + Vector3(0.0, 0.095, 0.0), Vector3.ONE * 0.44, float((i * 23) % 360))
+			var prop := _create_nature_asset(prop_asset, "PathProp", world + Vector3(0.0, 0.095, 0.0), Vector3.ONE * 0.36, float((i * 23) % 360))
 			marker_root.add_child(prop)
 
 		if path_reroute_flash > 0.0 and abs(i - active_flow_index) <= 1:

@@ -59,6 +59,7 @@ func update_path_preserving_position(points: Array[Vector3]) -> bool:
 func _create_default_visuals() -> void:
 	visual_root = Node3D.new()
 	visual_root.name = "LowPolyMonsterVisual"
+	visual_root.scale = Vector3.ONE * 0.88
 	add_child(visual_root)
 
 	var shadow := MeshInstance3D.new()
