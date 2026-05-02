@@ -84,7 +84,7 @@ func _create_default_visuals() -> void:
 	body.position = Vector3(0.0, 0.34, 0.0)
 	body.rotation_degrees.y = 12.0
 	body.scale = Vector3(1.05, 1.0, 0.92)
-	body.material_override = _make_material(Color("#b4475d"))
+	body.material_override = _make_material(Color("#b64b5f"))
 	visual_root.add_child(body)
 
 	var head := MeshInstance3D.new()
@@ -94,7 +94,7 @@ func _create_default_visuals() -> void:
 	head.mesh = head_mesh
 	head.position = Vector3(0.0, 0.62, -0.11)
 	head.rotation_degrees.x = -6.0
-	head.material_override = _make_material(Color("#d95d6f"))
+	head.material_override = _make_material(Color("#d45f70"))
 	visual_root.add_child(head)
 
 	for x in [-0.12, 0.12]:
@@ -104,7 +104,7 @@ func _create_default_visuals() -> void:
 		eye_mesh.size = Vector3(0.07, 0.07, 0.035)
 		eye.mesh = eye_mesh
 		eye.position = Vector3(x, 0.66, -0.295)
-		eye.material_override = _make_material(Color("#fff7ed"))
+		eye.material_override = _make_material(Color("#fff0d8"))
 		visual_root.add_child(eye)
 
 	for x in [-0.15, 0.15]:
@@ -114,7 +114,7 @@ func _create_default_visuals() -> void:
 		pupil_mesh.size = Vector3(0.028, 0.04, 0.02)
 		pupil.mesh = pupil_mesh
 		pupil.position = Vector3(x, 0.66, -0.318)
-		pupil.material_override = _make_material(Color("#1f2937"))
+		pupil.material_override = _make_material(Color("#25313a"))
 		visual_root.add_child(pupil)
 
 	for x in [-0.16, 0.16]:
@@ -128,7 +128,7 @@ func _create_default_visuals() -> void:
 		horn.mesh = horn_mesh
 		horn.position = Vector3(x, 0.83, -0.05)
 		horn.rotation_degrees = Vector3(18.0, 0.0, -18.0 if x < 0.0 else 18.0)
-		horn.material_override = _make_material(Color("#ffd08a"))
+		horn.material_override = _make_material(Color("#eec17c"))
 		visual_root.add_child(horn)
 
 	for x in [-0.19, 0.19]:
@@ -139,7 +139,7 @@ func _create_default_visuals() -> void:
 			leg_mesh.size = Vector3(0.10, 0.18, 0.12)
 			leg.mesh = leg_mesh
 			leg.position = Vector3(x, 0.12, z)
-			leg.material_override = _make_material(Color("#8f354d"))
+			leg.material_override = _make_material(Color("#8b394d"))
 			visual_root.add_child(leg)
 
 	var nose := MeshInstance3D.new()
@@ -148,7 +148,7 @@ func _create_default_visuals() -> void:
 	nose_mesh.size = Vector3(0.12, 0.08, 0.09)
 	nose.mesh = nose_mesh
 	nose.position = Vector3(0.0, 0.58, -0.34)
-	nose.material_override = _make_material(Color("#7c2d3f"))
+	nose.material_override = _make_material(Color("#773247"))
 	visual_root.add_child(nose)
 
 func _face_direction(direction: Vector3) -> void:

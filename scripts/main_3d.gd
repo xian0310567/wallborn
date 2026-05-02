@@ -99,22 +99,22 @@ func _create_light() -> void:
 	var light := DirectionalLight3D.new()
 	light.name = "KeyLight"
 	light.rotation_degrees = Vector3(-48.0, 32.0, 0.0)
-	light.light_energy = 1.85
+	light.light_energy = 1.65
 	add_child(light)
 
 	var fill := DirectionalLight3D.new()
 	fill.name = "SoftFillLight"
 	fill.rotation_degrees = Vector3(-72.0, -120.0, 0.0)
-	fill.light_energy = 0.35
+	fill.light_energy = 0.48
 	add_child(fill)
 
 	var environment := WorldEnvironment.new()
 	environment.name = "WorldEnvironment"
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color("#acd8f2")
+	env.background_color = Color("#a9d7ef")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("#fff6df")
+	env.ambient_light_color = Color("#fff1d2")
 	env.ambient_light_energy = 0.72
 	environment.environment = env
 	add_child(environment)
@@ -151,7 +151,7 @@ func _create_hud() -> void:
 	status_label.add_theme_font_size_override("font_size", 16)
 	margin.add_child(status_label)
 
-	core_indicator_label = _create_indicator_label("CORE", Color("#fb7185"))
+	core_indicator_label = _create_indicator_label("CORE", Color("#e86d78"))
 	canvas.add_child(core_indicator_label)
 
 	enemy_indicator_label = _create_indicator_label("ENEMY", Color("#f97316"))
@@ -317,7 +317,7 @@ func _create_world_base() -> MeshInstance3D:
 	mesh.size = Vector3(board_size.x + 2.4, 0.34, board_size.y + 2.4)
 	base.mesh = mesh
 	base.position = grid_view.board_center(grid.size) + Vector3(0.0, -0.24, 0.0)
-	base.material_override = _make_material(Color("#567f48"))
+	base.material_override = _make_material(Color("#5f8750"))
 	return base
 
 func _create_cell_mesh(cell: Vector2i) -> Node3D:
@@ -355,7 +355,7 @@ func _create_grass_chip(cell: Vector2i) -> MeshInstance3D:
 	chip.mesh = mesh
 	chip.position = Vector3(float((cell.x * 13) % 7 - 3) * 0.06, 0.078, float((cell.y * 17) % 7 - 3) * 0.055)
 	chip.rotation_degrees.y = float((cell.x * 31 + cell.y * 19) % 360)
-	chip.material_override = _make_material(Color("#c7e37a"))
+	chip.material_override = _make_material(Color("#c6dc78"))
 	return chip
 
 func _should_add_grass_blade(cell: Vector2i) -> bool:
@@ -366,7 +366,7 @@ func _should_add_grass_blade(cell: Vector2i) -> bool:
 	return (cell.x * 5 + cell.y * 7) % 11 == 0
 
 func _add_terrain_edge_blocks(root: Node3D, cell: Vector2i) -> void:
-	var edge_material := _make_material(Color("#496c3f"))
+	var edge_material := _make_material(Color("#47683f"))
 	if cell.x == 0:
 		root.add_child(_create_terrain_edge("WestEdge", Vector3(-0.51, -0.035, 0.0), Vector3(0.07, 0.25, 0.98), edge_material))
 	if cell.x == grid.size.x - 1:
@@ -409,21 +409,21 @@ func _cell_height_offset(cell: Vector2i) -> float:
 func _cell_top_color(cell: Vector2i) -> Color:
 	match grid.get_cell_type(cell):
 		grid.CELL_START:
-			return Color("#4ade80")
+			return Color("#77c66a")
 		grid.CELL_GOAL:
-			return Color("#fb7185")
+			return Color("#e86d78")
 		grid.CELL_BLOCKED:
-			return Color("#8fa2ae")
+			return Color("#87969a")
 	if path.has(cell):
 		return _path_ground_color(cell)
 	if _is_forest_zone(cell):
-		return _variant_color(cell, Color("#6faa52"), Color("#83bd5d"), Color("#5f9949"))
+		return _variant_color(cell, Color("#6b9d55"), Color("#82b861"), Color("#5b8f49"))
 	if _is_stone_zone(cell):
-		return _variant_color(cell, Color("#94a68d"), Color("#879b84"), Color("#a4b49a"))
-	return _variant_color(cell, Color("#8fc65f"), Color("#a8d66e"), Color("#7eb656"))
+		return _variant_color(cell, Color("#909d88"), Color("#7f907b"), Color("#a2ad93"))
+	return _variant_color(cell, Color("#8dbb61"), Color("#a6cf74"), Color("#7ead59"))
 
 func _path_ground_color(cell: Vector2i) -> Color:
-	return _variant_color(cell, Color("#b98555"), Color("#c99562"), Color("#a8764d"))
+	return _variant_color(cell, Color("#b57d4c"), Color("#c58d58"), Color("#a06f45"))
 
 func _variant_color(cell: Vector2i, a: Color, b: Color, c: Color) -> Color:
 	var value := (cell.x * 3 + cell.y * 5) % 6
@@ -567,11 +567,11 @@ func _add_defense_unit(cell: Vector2i) -> void:
 
 	unit.add_child(_create_defense_footprint())
 
-	var wall_material := _make_material(Color("#6f8491"))
-	var wall_dark_material := _make_material(Color("#526977"))
-	var trim_material := _make_material(Color("#d6b16f"))
-	var cannon_material := _make_material(Color("#e7eef2"))
-	var barrel_material := _make_material(Color("#2f4050"))
+	var wall_material := _make_material(Color("#6d7f88"))
+	var wall_dark_material := _make_material(Color("#506773"))
+	var trim_material := _make_material(Color("#d3ad68"))
+	var cannon_material := _make_material(Color("#e2e9eb"))
+	var barrel_material := _make_material(Color("#2d3d48"))
 
 	var back_wall := _create_defense_block("BackWall", Vector3(0.0, 0.26, 0.30), Vector3(0.82, 0.42, 0.18), wall_material)
 	unit.add_child(back_wall)
@@ -631,7 +631,7 @@ func _add_defense_unit(cell: Vector2i) -> void:
 	muzzle.material_override = barrel_material
 	unit.add_child(muzzle)
 
-	var banner := _create_defense_block("BlueBanner", Vector3(0.0, 0.42, 0.43), Vector3(0.34, 0.16, 0.035), _make_material(Color("#5ab0d6")))
+	var banner := _create_defense_block("BlueBanner", Vector3(0.0, 0.42, 0.43), Vector3(0.34, 0.16, 0.035), _make_material(Color("#5ca8c7")))
 	unit.add_child(banner)
 
 	defense_root.add_child(unit)
@@ -646,7 +646,7 @@ func _create_defense_footprint() -> MeshInstance3D:
 	mesh.height = 0.018
 	footprint.mesh = mesh
 	footprint.position = Vector3(0.0, 0.095, 0.0)
-	footprint.material_override = _make_material(Color("#3f5360"))
+	footprint.material_override = _make_material(Color("#3d5058"))
 	return footprint
 
 func _create_defense_block(block_name: String, position: Vector3, size: Vector3, material: Material) -> MeshInstance3D:
@@ -667,8 +667,8 @@ func _refresh_path_markers() -> void:
 	var flash_ratio := clampf(path_reroute_flash / REROUTE_FLASH_DURATION, 0.0, 1.0)
 	var flow_progress := 1.0 - flash_ratio
 	var active_flow_index := clampi(roundi(flow_progress * float(maxi(path.size() - 1, 0))), 0, maxi(path.size() - 1, 0))
-	var path_color := Color("#8b5e3c").lerp(Color("#c98f55"), flash_ratio * 0.24)
-	var segment_color := Color("#6f4a31").lerp(Color("#b67a49"), flash_ratio * 0.30)
+	var path_color := Color("#815638").lerp(Color("#be8250"), flash_ratio * 0.24)
+	var segment_color := Color("#68452f").lerp(Color("#ab7046"), flash_ratio * 0.30)
 	var pulse_color := Color("#f59e0b").lerp(Color("#fff7ad"), flash_ratio)
 	var flow_color := Color("#fef3c7").lerp(Color("#38bdf8"), 0.28)
 
