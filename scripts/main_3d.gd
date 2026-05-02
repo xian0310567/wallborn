@@ -7,7 +7,7 @@ const Enemy3DScript := preload("res://scripts/enemy_3d.gd")
 
 const GRID_SIZE := Vector2i(48, 28)
 const CELL_SIZE := 1.0
-const REROUTE_FLASH_DURATION := 0.75
+const REROUTE_FLASH_DURATION := 1.10
 
 var grid := WallbornGridScript.new(GRID_SIZE, 48)
 var grid_view = WallbornGridView3DScript.centered(GRID_SIZE, CELL_SIZE)
@@ -21,6 +21,7 @@ var wave_resolved_count := 0
 var wave_spawn_timer := 0.0
 var wave_spawn_interval := 0.65
 var path_reroute_flash := 0.0
+var last_reroute_cell := Vector2i(-1, -1)
 
 var board_root: Node3D
 var marker_root: Node3D
@@ -202,7 +203,8 @@ func try_place_defense_at_world(world_pos: Vector3) -> bool:
 		return false
 	defense_units[cell] = true
 	path = grid.find_path()
-	path_reroute_flash = 0.75
+	path_reroute_flash = REROUTE_FLASH_DURATION
+	last_reroute_cell = cell
 	_add_defense_unit(cell)
 	_rebuild_board()
 	_refresh_path_markers()
@@ -325,32 +327,50 @@ func _refresh_path_markers() -> void:
 		return
 
 	var flash_ratio := clampf(path_reroute_flash / REROUTE_FLASH_DURATION, 0.0, 1.0)
-	var path_color := Color("#c08457").lerp(Color("#fde68a"), flash_ratio)
-	var segment_color := Color("#9a6a3a").lerp(Color("#fbbf24"), flash_ratio)
-	var pulse_color := Color("#f59e0b").lerp(Color("#fef3c7"), flash_ratio)
+	var flow_progress := 1.0 - flash_ratio
+	var active_flow_index := clampi(roundi(flow_progress * float(maxi(path.size() - 1, 0))), 0, maxi(path.size() - 1, 0))
+	var path_color := Color("#b98250").lerp(Color("#f3c16f"), flash_ratio * 0.35)
+	var segment_color := Color("#8b5e34").lerp(Color("#dba85b"), flash_ratio * 0.45)
+	var pulse_color := Color("#f59e0b").lerp(Color("#fff7ad"), flash_ratio)
+	var flow_color := Color("#fef3c7").lerp(Color("#38bdf8"), 0.28)
 
 	for i in range(path.size()):
 		var cell := path[i]
+		var important_cell := i == 0 or i == path.size() - 1 or i % 2 == 0
+		if not important_cell:
+			continue
 		var marker := MeshInstance3D.new()
 		marker.name = "PathTile_%s_%s" % [cell.x, cell.y]
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.62, 0.032, 0.62)
+		mesh.size = Vector3(0.52, 0.03, 0.52)
 		marker.mesh = mesh
-		marker.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.082 + flash_ratio * 0.025, 0.0)
+		marker.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.082 + flash_ratio * 0.018, 0.0)
 		marker.material_override = _make_material(path_color)
 		marker_root.add_child(marker)
 
-		if path_reroute_flash > 0.0 and (i == 0 or i == path.size() - 1 or i % 3 == 0):
+		if path_reroute_flash > 0.0 and abs(i - active_flow_index) <= 1:
 			var pulse := MeshInstance3D.new()
-			pulse.name = "ReroutePulse_%s_%s" % [cell.x, cell.y]
+			pulse.name = "RerouteFlow_%s_%s" % [cell.x, cell.y]
 			var pulse_mesh := CylinderMesh.new()
-			pulse_mesh.top_radius = 0.24 + (1.0 - flash_ratio) * 0.28
+			pulse_mesh.top_radius = 0.22 + sin(flow_progress * PI) * 0.18
 			pulse_mesh.bottom_radius = pulse_mesh.top_radius
 			pulse_mesh.height = 0.025
 			pulse.mesh = pulse_mesh
-			pulse.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.085, 0.0)
-			pulse.material_override = _make_material(pulse_color)
+			pulse.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.12, 0.0)
+			pulse.material_override = _make_material(flow_color)
 			marker_root.add_child(pulse)
+
+	if path_reroute_flash > 0.0 and last_reroute_cell.x >= 0:
+		var origin_pulse := MeshInstance3D.new()
+		origin_pulse.name = "RerouteOrigin"
+		var origin_mesh := CylinderMesh.new()
+		origin_mesh.top_radius = 0.34 + (1.0 - flash_ratio) * 0.36
+		origin_mesh.bottom_radius = origin_mesh.top_radius
+		origin_mesh.height = 0.03
+		origin_pulse.mesh = origin_mesh
+		origin_pulse.position = grid_view.cell_to_world(last_reroute_cell) + Vector3(0.0, 0.13, 0.0)
+		origin_pulse.material_override = _make_material(pulse_color)
+		marker_root.add_child(origin_pulse)
 
 	for i in range(path.size() - 1):
 		var from_pos: Vector3 = grid_view.cell_to_world(path[i]) + Vector3(0.0, 0.095, 0.0)
