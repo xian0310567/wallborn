@@ -1,4 +1,4 @@
-extends Node3D
+﻿extends Node3D
 
 const WallbornGridScript := preload("res://scripts/wallborn_grid.gd")
 const WallbornGridView3DScript := preload("res://scripts/wallborn_grid_view_3d.gd")
@@ -567,39 +567,41 @@ func _refresh_path_markers() -> void:
 	var flash_ratio := clampf(path_reroute_flash / REROUTE_FLASH_DURATION, 0.0, 1.0)
 	var flow_progress := 1.0 - flash_ratio
 	var active_flow_index := clampi(roundi(flow_progress * float(maxi(path.size() - 1, 0))), 0, maxi(path.size() - 1, 0))
-	var path_color := Color("#9a6a42").lerp(Color("#d8a15c"), flash_ratio * 0.25)
-	var segment_color := Color("#7b5133").lerp(Color("#bd8550"), flash_ratio * 0.35)
+	var path_color := Color("#8b5e3c").lerp(Color("#c98f55"), flash_ratio * 0.24)
+	var segment_color := Color("#6f4a31").lerp(Color("#b67a49"), flash_ratio * 0.30)
 	var pulse_color := Color("#f59e0b").lerp(Color("#fff7ad"), flash_ratio)
 	var flow_color := Color("#fef3c7").lerp(Color("#38bdf8"), 0.28)
 
 	for i in range(path.size()):
 		var cell := path[i]
-		var important_cell := i == 0 or i == path.size() - 1 or i % 2 == 0
-		if not important_cell:
-			continue
-		var marker := MeshInstance3D.new()
-		marker.name = "PathTile_%s_%s" % [cell.x, cell.y]
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.38, 0.022, 0.38)
-		marker.mesh = mesh
-		marker.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.082 + flash_ratio * 0.018, 0.0)
-		marker.material_override = _make_material(path_color)
-		marker_root.add_child(marker)
+		var world: Vector3 = grid_view.cell_to_world(cell)
 
-		if i % 3 == 0 and i > 0 and i < path.size() - 1:
-			var prop_asset: String = PATH_PROP_ASSETS[int(i / 3) % PATH_PROP_ASSETS.size()]
-			var prop := _create_nature_asset(prop_asset, "PathProp", grid_view.cell_to_world(cell) + Vector3(0.0, 0.095, 0.0), Vector3.ONE * 0.52, float((i * 23) % 360))
+		var underlay := MeshInstance3D.new()
+		underlay.name = "PathTile_%s_%s" % [cell.x, cell.y]
+		var underlay_mesh := BoxMesh.new()
+		underlay_mesh.size = Vector3(0.54, 0.018, 0.54)
+		underlay.mesh = underlay_mesh
+		underlay.position = world + Vector3(0.0, 0.076 + flash_ratio * 0.01, 0.0)
+		underlay.material_override = _make_material(path_color)
+		marker_root.add_child(underlay)
+
+		var ground_asset := _create_nature_asset("ground_pathStraight", "PathGround", world + Vector3(0.0, 0.08, 0.0), Vector3.ONE * (0.44 + flash_ratio * 0.03), _path_asset_yaw(i))
+		marker_root.add_child(ground_asset)
+
+		if i % 6 == 0 and i > 0 and i < path.size() - 1:
+			var prop_asset: String = PATH_PROP_ASSETS[int(i / 6) % PATH_PROP_ASSETS.size()]
+			var prop := _create_nature_asset(prop_asset, "PathProp", world + Vector3(0.0, 0.095, 0.0), Vector3.ONE * 0.44, float((i * 23) % 360))
 			marker_root.add_child(prop)
 
 		if path_reroute_flash > 0.0 and abs(i - active_flow_index) <= 1:
 			var pulse := MeshInstance3D.new()
 			pulse.name = "RerouteFlow_%s_%s" % [cell.x, cell.y]
 			var pulse_mesh := CylinderMesh.new()
-			pulse_mesh.top_radius = 0.22 + sin(flow_progress * PI) * 0.18
+			pulse_mesh.top_radius = 0.18 + sin(flow_progress * PI) * 0.14
 			pulse_mesh.bottom_radius = pulse_mesh.top_radius
-			pulse_mesh.height = 0.025
+			pulse_mesh.height = 0.022
 			pulse.mesh = pulse_mesh
-			pulse.position = grid_view.cell_to_world(cell) + Vector3(0.0, 0.12, 0.0)
+			pulse.position = world + Vector3(0.0, 0.14, 0.0)
 			pulse.material_override = _make_material(flow_color)
 			marker_root.add_child(pulse)
 
@@ -607,19 +609,29 @@ func _refresh_path_markers() -> void:
 		var origin_pulse := MeshInstance3D.new()
 		origin_pulse.name = "RerouteOrigin"
 		var origin_mesh := CylinderMesh.new()
-		origin_mesh.top_radius = 0.34 + (1.0 - flash_ratio) * 0.36
+		origin_mesh.top_radius = 0.28 + (1.0 - flash_ratio) * 0.28
 		origin_mesh.bottom_radius = origin_mesh.top_radius
-		origin_mesh.height = 0.03
+		origin_mesh.height = 0.026
 		origin_pulse.mesh = origin_mesh
-		origin_pulse.position = grid_view.cell_to_world(last_reroute_cell) + Vector3(0.0, 0.13, 0.0)
+		origin_pulse.position = grid_view.cell_to_world(last_reroute_cell) + Vector3(0.0, 0.145, 0.0)
 		origin_pulse.material_override = _make_material(pulse_color)
 		marker_root.add_child(origin_pulse)
 
 	for i in range(path.size() - 1):
-		var from_pos: Vector3 = grid_view.cell_to_world(path[i]) + Vector3(0.0, 0.095, 0.0)
-		var to_pos: Vector3 = grid_view.cell_to_world(path[i + 1]) + Vector3(0.0, 0.095, 0.0)
+		var from_pos: Vector3 = grid_view.cell_to_world(path[i]) + Vector3(0.0, 0.092, 0.0)
+		var to_pos: Vector3 = grid_view.cell_to_world(path[i + 1]) + Vector3(0.0, 0.092, 0.0)
 		var segment := _create_path_segment(from_pos, to_pos, segment_color)
 		marker_root.add_child(segment)
+
+func _path_asset_yaw(path_index: int) -> float:
+	if path.size() < 2:
+		return 0.0
+	var from_cell: Vector2i = path[maxi(path_index - 1, 0)]
+	var to_cell: Vector2i = path[mini(path_index + 1, path.size() - 1)]
+	var direction: Vector2i = to_cell - from_cell
+	if abs(direction.x) >= abs(direction.y):
+		return 90.0
+	return 0.0
 
 func _create_path_segment(from_pos: Vector3, to_pos: Vector3, color: Color) -> MeshInstance3D:
 	var delta := to_pos - from_pos
@@ -756,5 +768,6 @@ func _make_material(color: Color) -> StandardMaterial3D:
 func _clear_children(node: Node) -> void:
 	for child in node.get_children():
 		child.queue_free()
+
 
 
