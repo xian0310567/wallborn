@@ -314,10 +314,10 @@ func _create_world_base() -> MeshInstance3D:
 	base.name = "DioramaGroundBase"
 	var mesh := BoxMesh.new()
 	var board_size: Vector2 = grid_view.board_size(grid.size)
-	mesh.size = Vector3(board_size.x + 2.4, 0.18, board_size.y + 2.4)
+	mesh.size = Vector3(board_size.x + 2.4, 0.34, board_size.y + 2.4)
 	base.mesh = mesh
-	base.position = grid_view.board_center(grid.size) + Vector3(0.0, -0.16, 0.0)
-	base.material_override = _make_material(Color("#6fa457"))
+	base.position = grid_view.board_center(grid.size) + Vector3(0.0, -0.24, 0.0)
+	base.material_override = _make_material(Color("#567f48"))
 	return base
 
 func _create_cell_mesh(cell: Vector2i) -> Node3D:
@@ -328,11 +328,11 @@ func _create_cell_mesh(cell: Vector2i) -> Node3D:
 	var top := MeshInstance3D.new()
 	top.name = "TerrainPatch"
 	var top_mesh := BoxMesh.new()
-	var patch_size := 0.96 if path.has(cell) else 0.90 + float((cell.x * 7 + cell.y * 3) % 4) * 0.015
-	top_mesh.size = Vector3(CELL_SIZE * patch_size, 0.035, CELL_SIZE * patch_size)
+	var patch_size := 1.02 if path.has(cell) else 0.965 + float((cell.x * 7 + cell.y * 3) % 3) * 0.008
+	top_mesh.size = Vector3(CELL_SIZE * patch_size, 0.065, CELL_SIZE * patch_size)
 	top.mesh = top_mesh
 	top.position = Vector3(0.0, _cell_height_offset(cell), 0.0)
-	top.rotation_degrees.y = float((cell.x * 11 + cell.y * 17) % 4) * 1.5
+	top.rotation_degrees.y = float((cell.x * 11 + cell.y * 17) % 3) * 0.75
 	top.material_override = _make_material(_cell_top_color(cell))
 	root.add_child(top)
 
@@ -351,7 +351,7 @@ func _create_grass_chip(cell: Vector2i) -> MeshInstance3D:
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3(0.18, 0.018, 0.05)
 	chip.mesh = mesh
-	chip.position = Vector3(float((cell.x * 13) % 7 - 3) * 0.06, 0.044, float((cell.y * 17) % 7 - 3) * 0.055)
+	chip.position = Vector3(float((cell.x * 13) % 7 - 3) * 0.06, 0.078, float((cell.y * 17) % 7 - 3) * 0.055)
 	chip.rotation_degrees.y = float((cell.x * 31 + cell.y * 19) % 360)
 	chip.material_override = _make_material(Color("#c7e37a"))
 	return chip
