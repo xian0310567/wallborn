@@ -8,6 +8,26 @@ const Enemy3DScript := preload("res://scripts/enemy_3d.gd")
 const GRID_SIZE := Vector2i(48, 28)
 const CELL_SIZE := 1.0
 const REROUTE_FLASH_DURATION := 1.10
+const NATURE_ASSET_ROOT := "res://assets/external/kenney_nature_isometric_used/"
+const TREE_ASSETS := [
+	"tree_oak",
+	"tree_default",
+	"tree_tall",
+	"tree_pineRoundA",
+	"tree_pineTallB",
+]
+const ROCK_ASSETS := [
+	"rock_largeA",
+	"rock_largeC",
+	"rock_tallB",
+	"stone_largeD",
+	"stone_tallA",
+]
+const PATH_PROP_ASSETS := [
+	"path_stone",
+	"path_wood",
+	"ground_pathStraight",
+]
 
 var grid := WallbornGridScript.new(GRID_SIZE, 48)
 var grid_view = WallbornGridView3DScript.centered(GRID_SIZE, CELL_SIZE)
@@ -22,6 +42,7 @@ var wave_spawn_timer := 0.0
 var wave_spawn_interval := 0.65
 var path_reroute_flash := 0.0
 var last_reroute_cell := Vector2i(-1, -1)
+var asset_texture_cache: Dictionary = {}
 
 var board_root: Node3D
 var marker_root: Node3D
@@ -77,18 +98,24 @@ func _create_roots() -> void:
 func _create_light() -> void:
 	var light := DirectionalLight3D.new()
 	light.name = "KeyLight"
-	light.rotation_degrees = Vector3(-55.0, 35.0, 0.0)
-	light.light_energy = 1.4
+	light.rotation_degrees = Vector3(-48.0, 32.0, 0.0)
+	light.light_energy = 1.85
 	add_child(light)
+
+	var fill := DirectionalLight3D.new()
+	fill.name = "SoftFillLight"
+	fill.rotation_degrees = Vector3(-72.0, -120.0, 0.0)
+	fill.light_energy = 0.35
+	add_child(fill)
 
 	var environment := WorldEnvironment.new()
 	environment.name = "WorldEnvironment"
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color("#b9e6ff")
+	env.background_color = Color("#acd8f2")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("#f8fafc")
-	env.ambient_light_energy = 0.62
+	env.ambient_light_color = Color("#fff6df")
+	env.ambient_light_energy = 0.72
 	environment.environment = env
 	add_child(environment)
 
@@ -158,113 +185,132 @@ func _rebuild_board() -> void:
 
 func _rebuild_decorations() -> void:
 	_clear_children(decoration_root)
-	_add_forest_cluster(Vector2i(7, 5), 7, "NorthWestGrove")
-	_add_forest_cluster(Vector2i(13, 22), 9, "SouthGrove")
-	_add_forest_cluster(Vector2i(37, 7), 8, "CoreSideWoods")
-	_add_rock_field(Vector2i(25, 6), "StoneField")
-	_add_rock_field(Vector2i(31, 20), "SouthStoneField")
-	_add_ruin(Vector2i(20, 15), "CentralRuin")
-	_add_ruin(Vector2i(41, 18), "BrokenGate")
+	_add_asset_forest_cluster(Vector2i(6, 5), 16, "NorthWestToyForest")
+	_add_asset_forest_cluster(Vector2i(14, 22), 18, "SouthToyForest")
+	_add_asset_forest_cluster(Vector2i(38, 7), 15, "CoreSideToyForest")
+	_add_asset_rock_field(Vector2i(25, 6), "NorthStoneCut")
+	_add_asset_rock_field(Vector2i(32, 20), "SouthStoneCut")
+	_add_asset_camp(Vector2i(19, 15), "CentralCampLandmark")
+	_add_asset_camp(Vector2i(42, 18), "CoreOutpostLandmark")
+	_add_border_cliff_line(0, "NorthCliffEdge")
+	_add_border_cliff_line(grid.size.y - 1, "SouthCliffEdge")
 
-func _add_forest_cluster(center: Vector2i, count: int, landmark_name: String) -> void:
+func _add_asset_forest_cluster(center: Vector2i, count: int, landmark_name: String) -> void:
 	var root := Node3D.new()
 	root.name = landmark_name
 	decoration_root.add_child(root)
 	for i in range(count):
-		var offset := Vector2i((i * 2) % 5 - 2, int(i / 2) % 4 - 1)
+		var offset := Vector2i((i * 3) % 7 - 3, int(i / 3) % 5 - 2)
 		var cell := center + offset
 		if not _can_decorate_cell(cell):
 			continue
-		root.add_child(_create_tree(cell, i))
+		var asset_name: String = TREE_ASSETS[i % TREE_ASSETS.size()]
+		var jitter := Vector3(float((i * 37) % 9 - 4) * 0.035, 0.0, float((i * 19) % 9 - 4) * 0.035)
+		var scale_value := 0.62 + float(i % 4) * 0.08
+		root.add_child(_create_nature_asset(asset_name, "TreeAsset", grid_view.cell_to_world(cell) + jitter, Vector3.ONE * scale_value, float((i * 29) % 360)))
 
-func _add_rock_field(center: Vector2i, landmark_name: String) -> void:
+func _add_asset_rock_field(center: Vector2i, landmark_name: String) -> void:
 	var root := Node3D.new()
 	root.name = landmark_name
 	decoration_root.add_child(root)
-	for i in range(7):
-		var offset := Vector2i((i * 3) % 5 - 2, (i * 2) % 4 - 1)
+	for i in range(11):
+		var offset := Vector2i((i * 5) % 7 - 3, (i * 2) % 5 - 2)
 		var cell := center + offset
 		if not _can_decorate_cell(cell):
 			continue
-		root.add_child(_create_rock(cell, i))
+		var asset_name: String = ROCK_ASSETS[i % ROCK_ASSETS.size()]
+		var scale_value := 0.55 + float(i % 3) * 0.10
+		root.add_child(_create_nature_asset(asset_name, "RockAsset", grid_view.cell_to_world(cell), Vector3.ONE * scale_value, float((i * 41) % 360)))
 
-func _add_ruin(center: Vector2i, landmark_name: String) -> void:
+func _add_asset_camp(center: Vector2i, landmark_name: String) -> void:
 	var root := Node3D.new()
 	root.name = landmark_name
-	root.position = grid_view.cell_to_world(center)
 	decoration_root.add_child(root)
+	var placements := [
+		{"asset": "campfire_logs", "offset": Vector2i(0, 0), "scale": 0.72, "yaw": 0.0},
+		{"asset": "log_stackLarge", "offset": Vector2i(-1, 1), "scale": 0.62, "yaw": 30.0},
+		{"asset": "tent_detailedClosed", "offset": Vector2i(1, -1), "scale": 0.62, "yaw": -35.0},
+		{"asset": "fence_simpleLow", "offset": Vector2i(-2, 0), "scale": 0.80, "yaw": 90.0},
+		{"asset": "fence_simpleLow", "offset": Vector2i(2, 0), "scale": 0.80, "yaw": 90.0},
+	]
+	for item in placements:
+		var cell: Vector2i = center + item["offset"]
+		if not _can_decorate_cell(cell):
+			continue
+		root.add_child(_create_nature_asset(item["asset"], "LandmarkAsset", grid_view.cell_to_world(cell), Vector3.ONE * float(item["scale"]), float(item["yaw"])))
 
-	for i in range(4):
-		var pillar := MeshInstance3D.new()
-		pillar.name = "RuinPillar"
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.28, 0.8 - float(i % 2) * 0.18, 0.28)
-		pillar.mesh = mesh
-		pillar.position = Vector3(-0.45 + float(i % 2) * 0.9, 0.36, -0.45 + float(i / 2) * 0.9)
-		pillar.rotation_degrees.y = float(i) * 7.0
-		pillar.material_override = _make_material(Color("#c7b299"))
-		root.add_child(pillar)
-
-	var slab := MeshInstance3D.new()
-	slab.name = "RuinSlab"
-	var slab_mesh := BoxMesh.new()
-	slab_mesh.size = Vector3(1.4, 0.12, 0.38)
-	slab.mesh = slab_mesh
-	slab.position = Vector3(0.0, 0.16, 0.0)
-	slab.rotation_degrees.y = 18.0
-	slab.material_override = _make_material(Color("#a8917c"))
-	root.add_child(slab)
+func _add_border_cliff_line(y: int, landmark_name: String) -> void:
+	var root := Node3D.new()
+	root.name = landmark_name
+	decoration_root.add_child(root)
+	for x in range(2, grid.size.x - 2, 4):
+		var cell := Vector2i(x, y)
+		var asset_name := "cliff_block_rock" if x % 8 == 2 else "cliff_blockHalf_rock"
+		var yaw := 0.0 if y == 0 else 180.0
+		root.add_child(_create_nature_asset(asset_name, "CliffEdgeAsset", grid_view.cell_to_world(cell), Vector3.ONE * 0.58, yaw))
 
 func _can_decorate_cell(cell: Vector2i) -> bool:
 	if not grid.is_in_bounds(cell):
 		return false
 	if cell == grid.start_cell or cell == grid.goal_cell:
 		return false
+	if path.has(cell):
+		return false
 	return true
 
-func _create_tree(cell: Vector2i, index: int) -> Node3D:
-	var root := Node3D.new()
-	root.name = "Tree_%s_%s" % [cell.x, cell.y]
-	root.position = grid_view.cell_to_world(cell) + Vector3(float(index % 3 - 1) * 0.11, 0.0, float((index + 1) % 3 - 1) * 0.09)
+func _create_nature_asset(asset_name: String, node_name: String, position: Vector3, scale_value: Vector3, yaw_degrees: float) -> Node3D:
+	var texture: Texture2D = _load_nature_texture(asset_name)
+	if texture != null:
+		var sprite := Sprite3D.new()
+		sprite.name = "%s_%s" % [node_name, asset_name]
+		sprite.texture = texture
+		sprite.pixel_size = 0.012
+		sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sprite.position = position + Vector3(0.0, _asset_vertical_offset(asset_name), 0.0)
+		sprite.scale = scale_value
+		return sprite
+	return _create_asset_fallback(node_name, position, scale_value, yaw_degrees)
 
-	var trunk := MeshInstance3D.new()
-	var trunk_mesh := CylinderMesh.new()
-	trunk_mesh.radial_segments = 6
-	trunk_mesh.top_radius = 0.07
-	trunk_mesh.bottom_radius = 0.09
-	trunk_mesh.height = 0.42
-	trunk.mesh = trunk_mesh
-	trunk.position = Vector3(0.0, 0.28, 0.0)
-	trunk.material_override = _make_material(Color("#7c4a2d"))
-	root.add_child(trunk)
+func _load_nature_texture(asset_name: String) -> Texture2D:
+	var texture_name := "%s_NE.png" % asset_name
+	if asset_texture_cache.has(texture_name):
+		return asset_texture_cache[texture_name]
+	var path := NATURE_ASSET_ROOT + texture_name
+	var image := Image.new()
+	var error := image.load(path)
+	if error != OK:
+		push_warning("Nature texture failed to load: %s" % path)
+		asset_texture_cache[texture_name] = null
+		return null
+	var texture := ImageTexture.create_from_image(image)
+	asset_texture_cache[texture_name] = texture
+	return texture
 
-	var leaves := MeshInstance3D.new()
-	var leaves_mesh := SphereMesh.new()
-	leaves_mesh.radial_segments = 8
-	leaves_mesh.rings = 4
-	leaves_mesh.radius = 0.28 + float(index % 3) * 0.035
-	leaves_mesh.height = 0.48
-	leaves.mesh = leaves_mesh
-	leaves.position = Vector3(0.0, 0.62, 0.0)
-	leaves.scale = Vector3(1.05, 0.9, 1.05)
-	leaves.material_override = _make_material(Color("#3faa5f") if index % 2 == 0 else Color("#2f8f55"))
-	root.add_child(leaves)
-	return root
+func _asset_vertical_offset(asset_name: String) -> float:
+	if asset_name.begins_with("ground_") or asset_name.begins_with("path_"):
+		return 0.12
+	if asset_name.begins_with("rock_") or asset_name.begins_with("stone_"):
+		return 0.34
+	if asset_name.begins_with("fence_") or asset_name.begins_with("campfire_") or asset_name.begins_with("log_"):
+		return 0.32
+	if asset_name.begins_with("cliff_"):
+		return 0.42
+	return 0.62
 
-func _create_rock(cell: Vector2i, index: int) -> Node3D:
-	var root := Node3D.new()
-	root.name = "Rock_%s_%s" % [cell.x, cell.y]
-	root.position = grid_view.cell_to_world(cell) + Vector3(float(index % 2) * 0.16, 0.0, float(index % 3 - 1) * 0.12)
-
-	var rock := MeshInstance3D.new()
+func _create_asset_fallback(node_name: String, position: Vector3, scale_value: Vector3, yaw_degrees: float) -> Node3D:
+	var fallback := Node3D.new()
+	fallback.name = "%s_Fallback" % node_name
+	fallback.position = position
+	fallback.scale = scale_value
+	fallback.rotation_degrees.y = yaw_degrees
+	var mesh_instance := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
-	mesh.size = Vector3(0.32 + float(index % 3) * 0.07, 0.2 + float(index % 2) * 0.08, 0.28 + float(index % 4) * 0.04)
-	rock.mesh = mesh
-	rock.position = Vector3(0.0, 0.12, 0.0)
-	rock.rotation_degrees = Vector3(float(index % 3) * 6.0, float(index) * 19.0, float(index % 2) * 5.0)
-	rock.material_override = _make_material(Color("#94a3b8") if index % 2 == 0 else Color("#7c8797"))
-	root.add_child(rock)
-	return root
+	mesh.size = Vector3(0.55, 0.55, 0.55)
+	mesh_instance.mesh = mesh
+	mesh_instance.position.y = 0.28
+	mesh_instance.material_override = _make_material(Color("#6b8f54"))
+	fallback.add_child(mesh_instance)
+	return fallback
 
 func _create_cell_mesh(cell: Vector2i) -> Node3D:
 	var root := Node3D.new()
@@ -492,6 +538,11 @@ func _refresh_path_markers() -> void:
 		marker.material_override = _make_material(path_color)
 		marker_root.add_child(marker)
 
+		if i % 5 == 0 and i > 0 and i < path.size() - 1:
+			var prop_asset: String = PATH_PROP_ASSETS[int(i / 5) % PATH_PROP_ASSETS.size()]
+			var prop := _create_nature_asset(prop_asset, "PathProp", grid_view.cell_to_world(cell) + Vector3(0.0, 0.095, 0.0), Vector3.ONE * 0.42, float((i * 23) % 360))
+			marker_root.add_child(prop)
+
 		if path_reroute_flash > 0.0 and abs(i - active_flow_index) <= 1:
 			var pulse := MeshInstance3D.new()
 			pulse.name = "RerouteFlow_%s_%s" % [cell.x, cell.y]
@@ -627,9 +678,9 @@ func _place_edge_indicator(label: Label, camera: Camera3D, world_position: Vecto
 
 func _screen_direction_label(delta: Vector2) -> String:
 	if delta.length() < 0.01:
-		return "•"
-	var horizontal := "→" if delta.x > 0.0 else "←"
-	var vertical := "↓" if delta.y > 0.0 else "↑"
+		return "CENTER"
+	var horizontal := "RIGHT" if delta.x > 0.0 else "LEFT"
+	var vertical := "DOWN" if delta.y > 0.0 else "UP"
 	if absf(delta.x) > absf(delta.y) * 1.6:
 		return horizontal
 	if absf(delta.y) > absf(delta.x) * 1.6:
@@ -657,3 +708,5 @@ func _make_material(color: Color) -> StandardMaterial3D:
 func _clear_children(node: Node) -> void:
 	for child in node.get_children():
 		child.queue_free()
+
+
