@@ -21,8 +21,8 @@ func _initialize() -> void:
 	_assert_equal(rig.global_position, Vector3.ZERO, "camera home should return to board center")
 	_assert_equal(rig.yaw_degrees, 45.0, "camera home should restore diorama yaw")
 	_assert_float_close(rig.camera.size, rig.default_ortho_size, 0.001, "camera home should restore default zoom")
-	_assert_float_close(rig.min_ortho_size, 6.5, 0.001, "camera min zoom should stay constrained for defense readability")
-	_assert_float_close(rig.max_ortho_size, 18.0, 0.001, "camera max zoom should support large-map navigation without losing diorama focus")
+	_assert_float_close(rig.min_ortho_size, 5.5, 0.001, "camera min zoom should support close diorama inspection")
+	_assert_float_close(rig.max_ortho_size, 16.0, 0.001, "camera max zoom should support navigation without losing diorama focus")
 
 	var q_event := InputEventKey.new()
 	q_event.keycode = KEY_Q
