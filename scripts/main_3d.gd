@@ -125,7 +125,7 @@ func _create_camera() -> void:
 	add_child(camera_rig)
 	var core_position: Vector3 = grid_view.cell_to_world(grid.goal_cell)
 	camera_rig.focus_on(core_position)
-	camera_rig.configure_focus_bounds(grid_view.board_center(grid.size), grid_view.board_size(grid.size), 4.0)
+	camera_rig.configure_focus_bounds(grid_view.board_center(grid.size), grid_view.board_size(grid.size), 2.0)
 	camera_rig.set_home_position(core_position)
 
 func _create_hud() -> void:

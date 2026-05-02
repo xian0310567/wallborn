@@ -1,16 +1,16 @@
 extends Node3D
 class_name CameraRig3D
 
-@export var move_speed := 15.0
+@export var move_speed := 10.5
 @export var drag_speed := 0.018
-@export var default_ortho_size := 14.0
-@export var min_ortho_size := 8.0
-@export var max_ortho_size := 24.0
-@export var zoom_step := 1.2
+@export var default_ortho_size := 11.5
+@export var min_ortho_size := 6.5
+@export var max_ortho_size := 18.0
+@export var zoom_step := 0.9
 @export var yaw_step_degrees := 90.0
-@export var camera_distance := 10.5
-@export var camera_height := 7.4
-@export var bounds_margin := 4.0
+@export var camera_distance := 8.8
+@export var camera_height := 8.6
+@export var bounds_margin := 2.0
 
 var yaw_degrees := 45.0
 var camera: Camera3D
@@ -71,7 +71,8 @@ func _process(delta: float) -> void:
 		var yaw := deg_to_rad(home_yaw_degrees)
 		var screen_up := Vector3(-sin(yaw), 0.0, -cos(yaw))
 		var screen_right := Vector3(cos(yaw), 0.0, -sin(yaw))
-		global_position += (screen_right * input.x - screen_up * input.y) * move_speed * delta
+		var zoom_speed_scale := camera.size / default_ortho_size
+		global_position += (screen_right * input.x - screen_up * input.y) * move_speed * zoom_speed_scale * delta
 		clamp_to_focus_bounds()
 		_apply_camera_transform()
 
